@@ -2,16 +2,15 @@ import { useEffect, useState } from 'react'
 import { Toaster as SonnerToaster } from './sonner'
 
 export function Toaster() {
-	const [mounted, setMounted] = useState(false)
+    const [mounted, setMounted] = useState(false)
 
-	useEffect(() => {
-		setMounted(true)
-	}, [])
+    useEffect(() => {
+        setMounted(true)
+    }, [])
 
-	if (!mounted) {
-		return null
-	}
+    if (!mounted) {
+        return null
+    }
 
-	return <SonnerToaster />
+    return <SonnerToaster />
 }
-
