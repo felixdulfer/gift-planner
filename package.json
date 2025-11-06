@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev --port 3000",
-    "build": "vite build",
+    "build": "vite build && node scripts/generate-index-html.js",
     "serve": "vite preview",
     "test": "vitest run",
     "test:e2e": "playwright test",

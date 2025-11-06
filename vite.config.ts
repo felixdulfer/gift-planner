@@ -4,15 +4,25 @@ import viteReact from '@vitejs/plugin-react'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
 import tailwindcss from '@tailwindcss/vite'
 
+const isGitHubPages = process.env.GITHUB_PAGES === 'true'
+
 const config = defineConfig({
-  base: process.env.GITHUB_PAGES ? '/gift-planner/' : '/',
+  base: isGitHubPages ? '/gift-planner/' : '/',
+  build: {
+    outDir: 'dist',
+  },
   plugins: [
     // this is the plugin that enables path aliases
     viteTsConfigPaths({
       projects: ['./tsconfig.json'],
     }),
     tailwindcss(),
-    tanstackStart(),
+    tanstackStart({
+      // Ensure static builds for GitHub Pages
+      ...(isGitHubPages && {
+        // Add any TanStack Start specific config for static builds
+      }),
+    }),
     viteReact({
       babel: {
         plugins: ['babel-plugin-react-compiler'],
