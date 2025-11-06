@@ -24,7 +24,6 @@ import { getCurrentUserId } from '@/utils/gift-planner'
 import { usePersistCollection } from '@/utils/persistence'
 
 export const Route = createFileRoute('/groups/')({
-    ssr: false,
     component: GroupsPage,
 })
 

@@ -1,11 +1,10 @@
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import type { QueryClient } from '@tanstack/react-query'
 import {
-    createRootRouteWithContext,
-    HeadContent,
-    Link,
-    Scripts,
-    useRouterState,
+	createRootRouteWithContext,
+	Link,
+	Outlet,
+	useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { Button } from '@/components/ui/button'
@@ -15,86 +14,52 @@ import { AppSidebar } from '../components/AppSidebar'
 import { ThemeProvider } from '../components/ThemeProvider'
 
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
-import appCss from '../styles.css?url'
 
 interface MyRouterContext {
-    queryClient: QueryClient
-}
-
-// Memoize the head configuration to prevent unnecessary re-renders
-const headConfig = {
-    meta: [
-        {
-            charSet: 'utf-8',
-        },
-        {
-            name: 'viewport',
-            content: 'width=device-width, initial-scale=1',
-        },
-        {
-            title: 'TanStack Start Starter',
-        },
-    ],
-    links: [
-        {
-            rel: 'stylesheet',
-            href: appCss,
-            id: 'app-stylesheet',
-        },
-    ],
+	queryClient: QueryClient
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
-    head: () => headConfig,
-
-    shellComponent: RootDocument,
-    notFoundComponent: NotFound,
+	component: RootComponent,
+	notFoundComponent: NotFound,
 })
 
-function RootDocument({ children }: { children: React.ReactNode }) {
-    const router = useRouterState()
-    const isHomePage = router.location.pathname === '/'
+function RootComponent() {
+	const router = useRouterState()
+	const isHomePage = router.location.pathname === '/'
 
-    const content = isHomePage ? (
-        children
-    ) : (
-        <SidebarProvider>
-            <AppSidebar />
-            {children}
-        </SidebarProvider>
-    )
+	const content = isHomePage ? (
+		<Outlet />
+	) : (
+		<SidebarProvider>
+			<AppSidebar />
+			<Outlet />
+		</SidebarProvider>
+	)
 
-    return (
-        <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-        >
-            <html lang="en" suppressHydrationWarning>
-                <head>
-                    <HeadContent />
-                </head>
-                <body>
-                    {content}
-                    <Toaster />
-                    <TanStackDevtools
-                        config={{
-                            position: 'bottom-right',
-                        }}
-                        plugins={[
-                            {
-                                name: 'Tanstack Router',
-                                render: <TanStackRouterDevtoolsPanel />,
-                            },
-                            TanStackQueryDevtools,
-                        ]}
-                    />
-                    <Scripts />
-                </body>
-            </html>
-        </ThemeProvider>
-    )
+	return (
+		<ThemeProvider
+			attribute="class"
+			defaultTheme="system"
+			enableSystem
+			disableTransitionOnChange
+		>
+			{content}
+			<Toaster />
+			<TanStackDevtools
+				config={{
+					position: 'bottom-right',
+				}}
+				plugins={[
+					{
+						name: 'Tanstack Router',
+						render: <TanStackRouterDevtoolsPanel />,
+					},
+					TanStackQueryDevtools,
+				]}
+			/>
+		</ThemeProvider>
+	)
 }
 
 function NotFound() {
