@@ -1,35 +1,37 @@
 import { createFileRoute, Link, Outlet } from '@tanstack/react-router'
-import { ArrowLeft, Calendar, Users } from 'lucide-react'
+import { ArrowLeft, Calendar, Pencil, Save, Users, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { CreateEventDialog } from '@/components/gift-planner/CreateEventDialog'
 import {
-	AddUserDialog,
-	JoinGroupDialog,
+    AddUserDialog,
+    JoinGroupDialog,
 } from '@/components/gift-planner/UserManagement'
+import { SiteHeader } from '@/components/SiteHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { SidebarInset } from '@/components/ui/sidebar'
-import { SiteHeader } from '@/components/SiteHeader'
 import {
-	type Event,
-	eventsCollection,
-	eventsStore,
-	type Group,
-	type GroupMember,
-	groupMembersCollection,
-	groupMembersStore,
-	groupsCollection,
-	groupsStore,
-	type User,
-	usersCollection,
-	usersStore,
+    type Event,
+    eventsCollection,
+    eventsStore,
+    type Group,
+    type GroupMember,
+    groupMembersCollection,
+    groupMembersStore,
+    groupsCollection,
+    groupsStore,
+    type User,
+    usersCollection,
+    usersStore,
 } from '@/db-collections'
 import { useStoreQuery } from '@/hooks/useLiveQuery'
 import { usePersistCollection } from '@/utils/persistence'
@@ -40,47 +42,43 @@ export const Route = createFileRoute('/groups/$groupId/')({
 })
 
 function GroupDetailPage() {
-	const { groupId } = Route.useParams()
-	const group = useStoreQuery(
-		groupsStore,
-		(items) => items.filter((g) => g.id === groupId),
-		[groupId],
-	)
-	const events = useStoreQuery(
-		eventsStore,
-		(items) => items.filter((e) => e.groupId === groupId),
-		[groupId],
-	)
-	const groupMembers = useStoreQuery(
-		groupMembersStore,
-		(items) => items.filter((m) => m.groupId === groupId),
-		[groupId],
-	)
-	const users = useStoreQuery(usersStore, (items) => items)
+    const { groupId } = Route.useParams()
+    const group = useStoreQuery(
+        groupsStore,
+        (items) => items.filter((g) => g.id === groupId),
+        [groupId],
+    )
+    const events = useStoreQuery(
+        eventsStore,
+        (items) => items.filter((e) => e.groupId === groupId),
+        [groupId],
+    )
+    const groupMembers = useStoreQuery(
+        groupMembersStore,
+        (items) => items.filter((m) => m.groupId === groupId),
+        [groupId],
+    )
+    const users = useStoreQuery(usersStore, (items) => items)
 
-	// Persist collections
-	// Get all groups for persistence (not just the single one)
-	const allGroups = useStoreQuery(groupsStore, (items) => items)
-	usePersistCollection(
-		eventsStore,
-		'events',
-		events.data as Event[] | undefined,
-	)
-	usePersistCollection(
-		groupMembersStore,
-		'groupMembers',
-		groupMembers.data as GroupMember[] | undefined,
-	)
-	usePersistCollection(
-		usersStore,
-		'users',
-		users.data as User[] | undefined,
-	)
-	usePersistCollection(
-		groupsStore,
-		'groups',
-		allGroups.data as Group[] | undefined,
-	)
+    // Persist collections
+    // Get all groups for persistence (not just the single one)
+    const allGroups = useStoreQuery(groupsStore, (items) => items)
+    usePersistCollection(
+        eventsStore,
+        'events',
+        events.data as Event[] | undefined,
+    )
+    usePersistCollection(
+        groupMembersStore,
+        'groupMembers',
+        groupMembers.data as GroupMember[] | undefined,
+    )
+    usePersistCollection(usersStore, 'users', users.data as User[] | undefined)
+    usePersistCollection(
+        groupsStore,
+        'groups',
+        allGroups.data as Group[] | undefined,
+    )
 
     const groupData = (group.data as Group[] | undefined)?.[0]
     if (!groupData) {
@@ -121,7 +119,10 @@ function GroupDetailPage() {
                         </Link>
                         <div className="flex items-start justify-between">
                             <div>
-                                <h1 className="text-3xl font-bold">{groupData.name}</h1>
+                                <EditableGroupName
+                                    groupId={groupId}
+                                    name={groupData.name}
+                                />
                                 {groupData.description && (
                                     <p className="text-muted-foreground mt-2">
                                         {groupData.description}
@@ -132,14 +133,19 @@ function GroupDetailPage() {
                                         <Users className="w-4 h-4" />
                                         <span>
                                             {memberCount}{' '}
-                                            {memberCount === 1 ? 'member' : 'members'}
+                                            {memberCount === 1
+                                                ? 'member'
+                                                : 'members'}
                                         </span>
                                     </div>
                                 </div>
                                 {memberNames && memberNames.length > 0 && (
                                     <div className="flex flex-wrap gap-2 mt-3">
                                         {memberNames.map((name: string) => (
-                                            <Badge key={name} variant="secondary">
+                                            <Badge
+                                                key={name}
+                                                variant="secondary"
+                                            >
                                                 {name}
                                             </Badge>
                                         ))}
@@ -161,13 +167,15 @@ function GroupDetailPage() {
                         {(events.data as Event[] | undefined) &&
                         (events.data as Event[]).length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {(events.data as Event[]).map((event: Event) => (
-                                    <EventCard
-                                        key={event.id}
-                                        event={event}
-                                        groupId={groupId}
-                                    />
-                                ))}
+                                {(events.data as Event[]).map(
+                                    (event: Event) => (
+                                        <EventCard
+                                            key={event.id}
+                                            event={event}
+                                            groupId={groupId}
+                                        />
+                                    ),
+                                )}
                             </div>
                         ) : (
                             <Card className="text-center py-12">
@@ -189,6 +197,100 @@ function GroupDetailPage() {
                 </div>
             </div>
         </SidebarInset>
+    )
+}
+
+function EditableGroupName({
+    groupId,
+    name,
+}: {
+    groupId: string
+    name: string
+}) {
+    const [isEditing, setIsEditing] = useState(false)
+    const [editedName, setEditedName] = useState(name)
+    const inputRef = useRef<HTMLInputElement>(null)
+
+    useEffect(() => {
+        if (isEditing && inputRef.current) {
+            inputRef.current.focus()
+            inputRef.current.select()
+        }
+    }, [isEditing])
+
+    useEffect(() => {
+        setEditedName(name)
+    }, [name])
+
+    const handleSave = () => {
+        const trimmedName = editedName.trim()
+        if (trimmedName && trimmedName !== name) {
+            groupsCollection.update(groupId, (draft) => {
+                draft.name = trimmedName
+            })
+        } else {
+            setEditedName(name)
+        }
+        setIsEditing(false)
+    }
+
+    const handleCancel = () => {
+        setEditedName(name)
+        setIsEditing(false)
+    }
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            e.preventDefault()
+            handleSave()
+        } else if (e.key === 'Escape') {
+            e.preventDefault()
+            handleCancel()
+        }
+    }
+
+    if (isEditing) {
+        return (
+            <div className="flex items-center gap-2">
+                <Input
+                    ref={inputRef}
+                    value={editedName}
+                    onChange={(e) => setEditedName(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    className="!text-3xl !font-bold h-auto py-2 px-3 -ml-3"
+                    style={{ fontSize: '1.875rem' }}
+                />
+                <Button
+                    size="icon-sm"
+                    variant="outline"
+                    onClick={handleSave}
+                    title="Save"
+                >
+                    <Save className="w-4 h-4" />
+                </Button>
+                <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    onClick={handleCancel}
+                    title="Cancel"
+                >
+                    <X className="w-4 h-4" />
+                </Button>
+            </div>
+        )
+    }
+
+    return (
+        <div className="group relative inline-flex items-center gap-2">
+            <h1
+                className="text-3xl font-bold cursor-pointer transition-all group-hover:outline group-hover:outline-2 group-hover:outline-primary/20 group-hover:rounded-md group-hover:px-2 group-hover:-mx-2"
+                onClick={() => setIsEditing(true)}
+                title="Click to edit"
+            >
+                {name}
+            </h1>
+            <Pencil className="w-4 h-4 opacity-0 group-hover:opacity-60 transition-opacity text-muted-foreground shrink-0" />
+        </div>
     )
 }
 

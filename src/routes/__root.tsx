@@ -5,12 +5,14 @@ import {
     HeadContent,
     Link,
     Scripts,
+    useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { Button } from '@/components/ui/button'
-import { Toaster } from '@/components/ui/toaster'
 import { SidebarProvider } from '@/components/ui/sidebar'
+import { Toaster } from '@/components/ui/toaster'
 import { AppSidebar } from '../components/AppSidebar'
+import { ThemeProvider } from '../components/ThemeProvider'
 
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 import appCss from '../styles.css?url'
@@ -50,32 +52,48 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+    const router = useRouterState()
+    const isHomePage = router.location.pathname === '/'
+
+    const content = isHomePage ? (
+        children
+    ) : (
+        <SidebarProvider>
+            <AppSidebar />
+            {children}
+        </SidebarProvider>
+    )
+
     return (
-        <html lang="en">
-            <head>
-                <HeadContent />
-            </head>
-            <body>
-                <SidebarProvider>
-                    <AppSidebar />
-                    {children}
-                </SidebarProvider>
-                <Toaster />
-                <TanStackDevtools
-                    config={{
-                        position: 'bottom-right',
-                    }}
-                    plugins={[
-                        {
-                            name: 'Tanstack Router',
-                            render: <TanStackRouterDevtoolsPanel />,
-                        },
-                        TanStackQueryDevtools,
-                    ]}
-                />
-                <Scripts />
-            </body>
-        </html>
+        <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+        >
+            <html lang="en" suppressHydrationWarning>
+                <head>
+                    <HeadContent />
+                </head>
+                <body>
+                    {content}
+                    <Toaster />
+                    <TanStackDevtools
+                        config={{
+                            position: 'bottom-right',
+                        }}
+                        plugins={[
+                            {
+                                name: 'Tanstack Router',
+                                render: <TanStackRouterDevtoolsPanel />,
+                            },
+                            TanStackQueryDevtools,
+                        ]}
+                    />
+                    <Scripts />
+                </body>
+            </html>
+        </ThemeProvider>
     )
 }
 

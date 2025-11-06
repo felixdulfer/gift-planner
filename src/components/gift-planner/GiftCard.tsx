@@ -1,7 +1,11 @@
 import { CheckCircle2, ExternalLink, ShoppingCart, User } from 'lucide-react'
-import { useId, useState } from 'react'
+import { EditGiftDialog } from './EditGiftDialog'
+import { type ReactNode, useEffect, useId, useState } from 'react'
+import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { giftsCollection } from '@/db-collections'
 import {
     Dialog,
     DialogContent,
@@ -46,9 +50,16 @@ export function GiftCard({
     const isPurchased = assignment?.isPurchased ?? false
     const isAssignedToMe =
         assignment?.assignedToUserId === currentUserId && !isPurchased
+    const isPurchasedByMe =
+        assignment?.assignedToUserId === currentUserId && isPurchased
 
-    const handleAssign = (userId: string) => {
-        if (assignment) {
+    const handleAssign = (userId: string | null) => {
+        if (userId === null) {
+            // Unassign
+            if (assignment) {
+                giftAssignmentsCollection.delete(assignment.id)
+            }
+        } else if (assignment) {
             // Update existing assignment
             giftAssignmentsCollection.update(assignment.id, (draft) => {
                 draft.assignedToUserId = userId
@@ -72,11 +83,38 @@ export function GiftCard({
                 draft.isPurchased = true
                 draft.purchasedAt = getCurrentTimestamp()
             })
+            toast.success('Gift marked as purchased', {
+                description: gift.name,
+            })
         }
+    }
+
+    const handleUnmarkPurchased = () => {
+        if (assignment) {
+            giftAssignmentsCollection.update(assignment.id, (draft) => {
+                draft.isPurchased = false
+                draft.purchasedAt = undefined
+            })
+            toast.success('Gift marked as not purchased', {
+                description: gift.name,
+            })
+        }
+    }
+
+    const handleToggleQualified = (checked: boolean | 'indeterminate') => {
+        giftsCollection.update(gift.id, (draft) => {
+            draft.isQualified = checked === true
+        })
     }
 
     return (
         <div className="flex items-start gap-3 p-3 border rounded-lg bg-card">
+            <Checkbox
+                checked={gift.isQualified ?? false}
+                onCheckedChange={handleToggleQualified}
+                className="mt-1"
+                title="Mark as qualified - this gift needs to be bought"
+            />
             {gift.picture && (
                 <img
                     src={gift.picture}
@@ -90,24 +128,59 @@ export function GiftCard({
                         <h4 className="font-medium text-sm">{gift.name}</h4>
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
                             {isPurchased && (
-                                <Badge variant="default" className="text-xs">
+                                <Badge
+                                    variant="default"
+                                    className={`text-xs ${
+                                        isPurchasedByMe
+                                            ? 'cursor-pointer hover:bg-primary/90 transition-colors'
+                                            : ''
+                                    }`}
+                                    onClick={
+                                        isPurchasedByMe
+                                            ? handleUnmarkPurchased
+                                            : undefined
+                                    }
+                                    title={
+                                        isPurchasedByMe
+                                            ? 'Click to unmark as purchased'
+                                            : undefined
+                                    }
+                                >
                                     <CheckCircle2 className="w-3 h-3 mr-1" />
                                     Purchased
                                 </Badge>
                             )}
                             {isAssigned && !isPurchased && assignedUser && (
-                                <Badge variant="secondary" className="text-xs">
-                                    <User className="w-3 h-3 mr-1" />
-                                    {assignedUser.name}
-                                </Badge>
+                                <AssignGiftDialog
+                                    users={users}
+                                    onAssign={handleAssign}
+                                    currentUserId={assignment.assignedToUserId}
+                                >
+                                    <Badge
+                                        variant="secondary"
+                                        className="text-xs cursor-pointer hover:bg-secondary/80 transition-colors"
+                                    >
+                                        <User className="w-3 h-3 mr-1" />
+                                        {assignedUser.name}
+                                    </Badge>
+                                </AssignGiftDialog>
                             )}
                             {!isAssigned && (
-                                <Badge variant="outline" className="text-xs">
-                                    Unassigned
-                                </Badge>
+                                <AssignGiftDialog
+                                    users={users}
+                                    onAssign={handleAssign}
+                                >
+                                    <Badge
+                                        variant="outline"
+                                        className="text-xs cursor-pointer hover:bg-accent transition-colors"
+                                    >
+                                        Unassigned
+                                    </Badge>
+                                </AssignGiftDialog>
                             )}
                         </div>
                     </div>
+                    <EditGiftDialog gift={gift} />
                 </div>
                 <div className="flex items-center gap-2 mt-2">
                     {gift.link && (
@@ -132,12 +205,6 @@ export function GiftCard({
                             Mark Purchased
                         </Button>
                     )}
-                    {!isAssigned && (
-                        <AssignGiftDialog
-                            users={users}
-                            onAssign={handleAssign}
-                        />
-                    )}
                 </div>
             </div>
         </div>
@@ -147,35 +214,59 @@ export function GiftCard({
 function AssignGiftDialog({
     users,
     onAssign,
+    currentUserId,
+    children,
 }: {
     users: UserType[]
-    onAssign: (userId: string) => void
+    onAssign: (userId: string | null) => void
+    currentUserId?: string
+    children?: ReactNode
 }) {
     const [open, setOpen] = useState(false)
-    const [selectedUserId, setSelectedUserId] = useState<string>('')
+    const [selectedUserId, setSelectedUserId] = useState<string>(
+        currentUserId || '',
+    )
     const selectId = useId()
+
+    useEffect(() => {
+        if (open) {
+            setSelectedUserId(currentUserId || '')
+        }
+    }, [open, currentUserId])
 
     const handleAssign = () => {
         if (selectedUserId) {
             onAssign(selectedUserId)
             setOpen(false)
-            setSelectedUserId('')
+            setSelectedUserId(currentUserId || '')
         }
+    }
+
+    const handleUnassign = () => {
+        onAssign(null)
+        setOpen(false)
+        setSelectedUserId('')
     }
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button size="sm" variant="outline" className="h-6 text-xs">
-                    <ShoppingCart className="w-3 h-3 mr-1" />
-                    Assign
-                </Button>
+                {children || (
+                    <Button size="sm" variant="outline" className="h-6 text-xs">
+                        <ShoppingCart className="w-3 h-3 mr-1" />
+                        Assign
+                    </Button>
+                )}
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Assign Gift</DialogTitle>
+                    <DialogTitle>
+                        {currentUserId ? 'Change Assignment' : 'Assign Gift'}
+                    </DialogTitle>
                     <DialogDescription>
-                        Assign this gift to a group member
+                        {currentUserId
+                            ? 'Assign this gift to a different group member or unassign it'
+                            : 'Assign this gift to a group member'}
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -203,10 +294,29 @@ function AssignGiftDialog({
                         </Select>
                     </div>
                 </div>
-                <DialogFooter>
-                    <Button onClick={handleAssign} disabled={!selectedUserId}>
-                        Assign Gift
-                    </Button>
+                <DialogFooter className="flex justify-between">
+                    {currentUserId && (
+                        <Button
+                            variant="destructive"
+                            onClick={handleUnassign}
+                        >
+                            Unassign
+                        </Button>
+                    )}
+                    <div className="flex gap-2 ml-auto">
+                        <Button
+                            variant="outline"
+                            onClick={() => setOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleAssign}
+                            disabled={!selectedUserId}
+                        >
+                            {currentUserId ? 'Change Assignment' : 'Assign Gift'}
+                        </Button>
+                    </div>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

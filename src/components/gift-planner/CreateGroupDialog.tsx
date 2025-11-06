@@ -4,35 +4,35 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
-	groupMembersCollection,
-	groupsCollection,
-	type User,
-	usersCollection,
-	usersStore,
+    groupMembersCollection,
+    groupsCollection,
+    type User,
+    usersCollection,
+    usersStore,
 } from '@/db-collections'
 import { useStoreQuery } from '@/hooks/useLiveQuery'
 import {
-	generateId,
-	getCurrentTimestamp,
-	getCurrentUserId,
+    generateId,
+    getCurrentTimestamp,
+    getCurrentUserId,
 } from '@/utils/gift-planner'
 
 export function CreateGroupDialog() {
-	const [open, setOpen] = useState(false)
-	const currentUserId = getCurrentUserId()
-	const users = useStoreQuery(usersStore, (items) => items)
+    const [open, setOpen] = useState(false)
+    const currentUserId = getCurrentUserId()
+    const users = useStoreQuery(usersStore, (items) => items)
 
     const form = useForm({
         defaultValues: {

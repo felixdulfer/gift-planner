@@ -9,11 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GroupsIndexRouteImport } from './routes/groups/index'
 import { Route as GroupsGroupIdIndexRouteImport } from './routes/groups/$groupId/index'
 import { Route as GroupsGroupIdEventsEventIdIndexRouteImport } from './routes/groups/$groupId/events/$eventId/index'
 
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -38,12 +44,14 @@ const GroupsGroupIdEventsEventIdIndexRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRoute
   '/groups': typeof GroupsIndexRoute
   '/groups/$groupId': typeof GroupsGroupIdIndexRoute
   '/groups/$groupId/events/$eventId': typeof GroupsGroupIdEventsEventIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRoute
   '/groups': typeof GroupsIndexRoute
   '/groups/$groupId': typeof GroupsGroupIdIndexRoute
   '/groups/$groupId/events/$eventId': typeof GroupsGroupIdEventsEventIdIndexRoute
@@ -51,6 +59,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRoute
   '/groups/': typeof GroupsIndexRoute
   '/groups/$groupId/': typeof GroupsGroupIdIndexRoute
   '/groups/$groupId/events/$eventId/': typeof GroupsGroupIdEventsEventIdIndexRoute
@@ -59,14 +68,21 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/dashboard'
     | '/groups'
     | '/groups/$groupId'
     | '/groups/$groupId/events/$eventId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/groups' | '/groups/$groupId' | '/groups/$groupId/events/$eventId'
+  to:
+    | '/'
+    | '/dashboard'
+    | '/groups'
+    | '/groups/$groupId'
+    | '/groups/$groupId/events/$eventId'
   id:
     | '__root__'
     | '/'
+    | '/dashboard'
     | '/groups/'
     | '/groups/$groupId/'
     | '/groups/$groupId/events/$eventId/'
@@ -74,6 +90,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DashboardRoute: typeof DashboardRoute
   GroupsIndexRoute: typeof GroupsIndexRoute
   GroupsGroupIdIndexRoute: typeof GroupsGroupIdIndexRoute
   GroupsGroupIdEventsEventIdIndexRoute: typeof GroupsGroupIdEventsEventIdIndexRoute
@@ -81,6 +98,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -114,6 +138,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DashboardRoute: DashboardRoute,
   GroupsIndexRoute: GroupsIndexRoute,
   GroupsGroupIdIndexRoute: GroupsGroupIdIndexRoute,
   GroupsGroupIdEventsEventIdIndexRoute: GroupsGroupIdEventsEventIdIndexRoute,

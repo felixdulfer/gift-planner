@@ -1,17 +1,20 @@
-import { Gift } from 'lucide-react'
+import { Gift, Pencil, Save, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Button } from '@/components/ui/button'
 import {
     Card,
     CardContent,
     CardDescription,
     CardHeader,
-    CardTitle,
 } from '@/components/ui/card'
-import type {
-    GiftAssignment,
-    Gift as GiftType,
-    Receiver,
-    User,
-    Wishlist,
+import { Input } from '@/components/ui/input'
+import {
+    type GiftAssignment,
+    type Gift as GiftType,
+    type Receiver,
+    receiversCollection,
+    type User,
+    type Wishlist,
 } from '@/db-collections'
 import { CreateWishlistDialog } from './CreateWishlistDialog'
 import { WishlistCard } from './WishlistCard'
@@ -45,10 +48,13 @@ export function ReceiverCard({
     return (
         <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
                     <Gift className="w-5 h-5" />
-                    {receiver.name}
-                </CardTitle>
+                    <EditableReceiverName
+                        receiverId={receiver.id}
+                        name={receiver.name}
+                    />
+                </div>
                 <CardDescription>
                     {receiverGifts.length}{' '}
                     {receiverGifts.length === 1 ? 'gift' : 'gifts'}
@@ -90,5 +96,99 @@ export function ReceiverCard({
                 </div>
             </CardContent>
         </Card>
+    )
+}
+
+function EditableReceiverName({
+    receiverId,
+    name,
+}: {
+    receiverId: string
+    name: string
+}) {
+    const [isEditing, setIsEditing] = useState(false)
+    const [editedName, setEditedName] = useState(name)
+    const inputRef = useRef<HTMLInputElement>(null)
+
+    useEffect(() => {
+        if (isEditing && inputRef.current) {
+            inputRef.current.focus()
+            inputRef.current.select()
+        }
+    }, [isEditing])
+
+    useEffect(() => {
+        setEditedName(name)
+    }, [name])
+
+    const handleSave = () => {
+        const trimmedName = editedName.trim()
+        if (trimmedName && trimmedName !== name) {
+            receiversCollection.update(receiverId, (draft) => {
+                draft.name = trimmedName
+            })
+        } else {
+            setEditedName(name)
+        }
+        setIsEditing(false)
+    }
+
+    const handleCancel = () => {
+        setEditedName(name)
+        setIsEditing(false)
+    }
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            e.preventDefault()
+            handleSave()
+        } else if (e.key === 'Escape') {
+            e.preventDefault()
+            handleCancel()
+        }
+    }
+
+    if (isEditing) {
+        return (
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+                <Input
+                    ref={inputRef}
+                    value={editedName}
+                    onChange={(e) => setEditedName(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    className="text-lg font-semibold h-auto py-1 px-2 -ml-2"
+                />
+                <Button
+                    size="icon-sm"
+                    variant="outline"
+                    onClick={handleSave}
+                    title="Save"
+                >
+                    <Save className="w-3 h-3" />
+                </Button>
+                <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    onClick={handleCancel}
+                    title="Cancel"
+                >
+                    <X className="w-3 h-3" />
+                </Button>
+            </div>
+        )
+    }
+
+    return (
+        <div className="group relative inline-flex items-center gap-2 flex-1 min-w-0">
+            <button
+                type="button"
+                className="text-lg font-semibold cursor-pointer transition-all group-hover:outline-2 group-hover:outline-primary/20 group-hover:rounded-md group-hover:px-2 group-hover:-mx-2 text-left truncate"
+                onClick={() => setIsEditing(true)}
+                title="Click to edit"
+            >
+                {name}
+            </button>
+            <Pencil className="w-4 h-4 opacity-0 group-hover:opacity-60 transition-opacity text-muted-foreground shrink-0" />
+        </div>
     )
 }

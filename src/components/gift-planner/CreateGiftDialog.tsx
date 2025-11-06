@@ -39,6 +39,7 @@ export function CreateGiftDialog({ wishlistId }: { wishlistId: string }) {
                 name: value.name,
                 picture: value.picture || undefined,
                 link: value.link || undefined,
+                isQualified: false,
                 createdAt: now,
                 createdBy: currentUserId,
             })
@@ -51,6 +52,34 @@ export function CreateGiftDialog({ wishlistId }: { wishlistId: string }) {
             form.reset()
         },
     })
+
+    const handlePaste = async (e: React.ClipboardEvent<HTMLInputElement>) => {
+        const items = e.clipboardData.items
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i]
+            if (item.type.indexOf('image') !== -1) {
+                e.preventDefault()
+                const file = item.getAsFile()
+                if (file) {
+                    const reader = new FileReader()
+                    reader.onload = (event) => {
+                        const dataUrl = event.target?.result as string
+                        form.setFieldValue('picture', dataUrl)
+                        toast.success('Image pasted', {
+                            description: 'Image has been pasted from clipboard.',
+                        })
+                    }
+                    reader.onerror = () => {
+                        toast.error('Failed to read image', {
+                            description: 'Could not process the pasted image.',
+                        })
+                    }
+                    reader.readAsDataURL(file)
+                }
+                break
+            }
+        }
+    }
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -118,9 +147,25 @@ export function CreateGiftDialog({ wishlistId }: { wishlistId: string }) {
                                         onChange={(e) =>
                                             field.handleChange(e.target.value)
                                         }
+                                        onPaste={handlePaste}
                                         onBlur={field.handleBlur}
-                                        placeholder="https://example.com/image.jpg"
+                                        placeholder="https://example.com/image.jpg or paste an image"
                                     />
+                                    {field.state.value && (
+                                        <div className="mt-2">
+                                            <img
+                                                src={field.state.value}
+                                                alt="Preview"
+                                                className="max-w-full h-32 object-contain rounded border"
+                                                onError={() => {
+                                                    toast.error('Invalid image', {
+                                                        description:
+                                                            'Could not load the image. Please check the URL or try pasting again.',
+                                                    })
+                                                }}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </form.Field>
