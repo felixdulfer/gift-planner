@@ -1,0 +1,24 @@
+{
+  "projectName": "gift-planner",
+  "mode": "file-router",
+  "typescript": true,
+  "tailwind": true,
+  "packageManager": "npm",
+  "addOnOptions": {},
+  "git": true,
+  "version": 1,
+  "framework": "react-cra",
+  "chosenAddOns": [
+    "biome",
+    "start",
+    "mcp",
+    "store",
+    "storybook",
+    "tanstack-query",
+    "shadcn",
+    "form",
+    "db",
+    "compiler",
+    "tanchat"
+  ]
+}
