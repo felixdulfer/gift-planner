@@ -1,6 +1,6 @@
-Welcome to your new TanStack app! 
+# Welcome to your new TanStack app!
 
-# Getting Started
+## Getting Started
 
 To run this application:
 
@@ -9,7 +9,7 @@ bun install
 bun run dev
 ```
 
-# Building For Production
+## Building For Production
 
 To build this application for production:
 
@@ -29,18 +29,15 @@ bun run test
 
 This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
 
-
 ## Linting & Formatting
 
 This project uses [Biome](https://biomejs.dev/) for linting and formatting. The following scripts are available:
-
 
 ```bash
 bun run lint
 bun run format
 bun run check
 ```
-
 
 ## Shadcn
 
@@ -50,8 +47,7 @@ Add components using the latest version of [Shadcn](https://ui.shadcn.com/).
 pnpx shadcn@latest add button
 ```
 
-
-# TanStack Chat Application
+## TanStack Chat Application
 
 Am example chat application built with TanStack Start, TanStack Store, and Claude AI.
 
@@ -64,18 +60,21 @@ ANTHROPIC_API_KEY=your_anthropic_api_key
 ## ✨ Features
 
 ### AI Capabilities
-- 🤖 Powered by Claude 3.5 Sonnet 
+
+- 🤖 Powered by Claude 3.5 Sonnet
 - 📝 Rich markdown formatting with syntax highlighting
 - 🎯 Customizable system prompts for tailored AI behavior
 - 🔄 Real-time message updates and streaming responses (coming soon)
 
 ### User Experience
+
 - 🎨 Modern UI with Tailwind CSS and Lucide icons
 - 🔍 Conversation management and history
 - 🔐 Secure API key management
 - 📋 Markdown rendering with code highlighting
 
 ### Technical Features
+
 - 📦 Centralized state management with TanStack Store
 - 🔌 Extensible architecture for multiple AI providers
 - 🛠️ TypeScript for type safety
@@ -83,15 +82,16 @@ ANTHROPIC_API_KEY=your_anthropic_api_key
 ## Architecture
 
 ### Tech Stack
+
 - **Frontend Framework**: TanStack Start
 - **Routing**: TanStack Router
 - **State Management**: TanStack Store
 - **Styling**: Tailwind CSS
 - **AI Integration**: Anthropic's Claude API
 
-
 ## Routing
-This project uses [TanStack Router](https://tanstack.com/router). The initial setup is a file based router. Which means that the routes are managed as files in `src/routes`.
+
+This project uses [TanStack Router](https://tanstack.com/router). The initial setup is a file based router. Routes are managed as files in `src/routes`.
 
 ### Adding A Route
 
@@ -151,7 +151,6 @@ The `<TanStackRouterDevtools />` component is not required so you can remove it 
 
 More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
 
-
 ## Data Fetching
 
 There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
@@ -187,7 +186,7 @@ Loaders simplify your data fetching logic dramatically. Check out more informati
 
 ### React-Query
 
-React-Query is an excellent addition or alternative to route loading and integrating it into you application is a breeze.
+React-Query is an excellent addition or alternative to route loading and integrating it into your application is a breeze.
 
 First add your dependencies:
 
@@ -339,10 +338,10 @@ Once we've created the derived store we can use it in the `App` component just l
 
 You can find out everything you need to know on how to use TanStack Store in the [TanStack Store documentation](https://tanstack.com/store/latest).
 
-# Demo files
+## Demo files
 
 Files prefixed with `demo` can be safely deleted. They are there to provide a starting point for you to play around with the features you've installed.
 
-# Learn More
+## Learn More
 
 You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
