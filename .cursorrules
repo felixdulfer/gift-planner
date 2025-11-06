@@ -1,6 +1,7 @@
 # Gift Planner - Cursor Rules
 
 ## Tech Stack
+- **Package Manager**: Bun
 - **Framework**: TanStack Start (React 19)
 - **Routing**: TanStack Router (file-based routing)
 - **State Management**: TanStack Store
@@ -160,4 +161,4 @@ pnpx shadcn@latest add button
 4. Use TanStack Store for client-side state
 5. Write tests for critical paths
 6. Follow the existing code patterns and structure
-7. Run `npm run check` before committing
+7. Run `bun run check` before committing
