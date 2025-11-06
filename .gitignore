@@ -12,3 +12,7 @@ count.txt
 .vinxi
 todos.json
 mcp-todos.json
+
+# Playwright
+playwright-report/
+test-results/
