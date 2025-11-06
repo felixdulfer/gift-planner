@@ -17,7 +17,8 @@ if (!mainJsFile) {
 	process.exit(1)
 }
 
-// Generate index.html
+// Generate index.html with proper structure for TanStack Start
+// TanStack Start expects a root element, but for static builds we need client-side rendering
 const indexHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -26,6 +27,11 @@ const indexHtml = `<!DOCTYPE html>
 	<title>Gift Planner</title>
 	<link rel="icon" href="${basePath}/favicon.ico">
 	${mainCssFile ? `<link rel="stylesheet" href="${basePath}/assets/${mainCssFile}">` : ''}
+	<script>
+		// Patch hydrateRoot to use createRoot for static builds
+		// This runs before the main module loads
+		window.__TANSTACK_START_STATIC__ = true;
+	</script>
 </head>
 <body>
 	<div id="root"></div>
