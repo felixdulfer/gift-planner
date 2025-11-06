@@ -2,6 +2,7 @@ import { useLiveQuery } from '@tanstack/react-db'
 import { useForm } from '@tanstack/react-form'
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
     Dialog,
@@ -72,6 +73,10 @@ export function CreateGroupDialog() {
                 groupId,
                 userId: currentUserId,
                 joinedAt: now,
+            })
+
+            toast.success('Group created successfully', {
+                description: `"${value.name}" has been created.`,
             })
 
             setOpen(false)

@@ -1,6 +1,7 @@
 import { useForm } from '@tanstack/react-form'
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
     Dialog,
@@ -40,6 +41,10 @@ export function CreateGiftDialog({ wishlistId }: { wishlistId: string }) {
                 link: value.link || undefined,
                 createdAt: now,
                 createdBy: currentUserId,
+            })
+
+            toast.success('Gift added successfully', {
+                description: `"${value.name}" has been added to the wishlist.`,
             })
 
             setOpen(false)

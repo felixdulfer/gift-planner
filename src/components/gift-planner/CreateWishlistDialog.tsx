@@ -1,6 +1,7 @@
 import { useForm } from '@tanstack/react-form'
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
     Dialog,
@@ -43,6 +44,12 @@ export function CreateWishlistDialog({
                 name: value.name || undefined,
                 createdAt: now,
                 createdBy: currentUserId,
+            })
+
+            toast.success('Wishlist created successfully', {
+                description: value.name
+                    ? `"${value.name}" wishlist has been created.`
+                    : 'Wishlist has been created.',
             })
 
             setOpen(false)

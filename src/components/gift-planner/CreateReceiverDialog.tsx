@@ -1,6 +1,7 @@
 import { useForm } from '@tanstack/react-form'
 import { UserPlus } from 'lucide-react'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
     Dialog,
@@ -36,6 +37,10 @@ export function CreateReceiverDialog({ eventId }: { eventId: string }) {
                 name: value.name,
                 createdAt: now,
                 createdBy: currentUserId,
+            })
+
+            toast.success('Receiver added successfully', {
+                description: `"${value.name}" has been added.`,
             })
 
             setOpen(false)

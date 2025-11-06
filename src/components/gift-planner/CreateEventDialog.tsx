@@ -1,6 +1,7 @@
 import { useForm } from '@tanstack/react-form'
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
     Dialog,
@@ -41,6 +42,10 @@ export function CreateEventDialog({ groupId }: { groupId: string }) {
                 date: value.date ? new Date(value.date).getTime() : undefined,
                 createdAt: now,
                 createdBy: currentUserId,
+            })
+
+            toast.success('Event created successfully', {
+                description: `"${value.name}" has been created.`,
             })
 
             setOpen(false)

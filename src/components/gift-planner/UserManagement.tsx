@@ -2,6 +2,7 @@ import { useLiveQuery } from '@tanstack/react-db'
 import { useForm } from '@tanstack/react-form'
 import { UserPlus, Users } from 'lucide-react'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
     Dialog,
@@ -49,13 +50,20 @@ export function AddUserDialog() {
 
                 usersCollection.insert(userData)
 
+                toast.success('User added successfully', {
+                    description: `"${userData.name}" has been added.`,
+                })
+
                 setOpen(false)
                 form.reset()
             } catch (error) {
                 console.error('Error adding user:', error)
-                alert(
-                    `Failed to add user: ${error instanceof Error ? error.message : String(error)}`,
-                )
+                toast.error('Failed to add user', {
+                    description:
+                        error instanceof Error
+                            ? error.message
+                            : String(error),
+                })
             }
         },
     })
@@ -190,22 +198,33 @@ export function JoinGroupDialog({ groupId }: { groupId: string }) {
 
         if (!existingMember) {
             try {
+                const selectedUser = (users.data as User[] | undefined)?.find(
+                    (u: User) => u.id === selectedUserId,
+                )
                 groupMembersCollection.insert({
                     id: generateId(),
                     groupId,
                     userId: selectedUserId,
                     joinedAt: now,
                 })
+                toast.success('User added to group', {
+                    description: `"${selectedUser?.name || 'User'}" has been added to the group.`,
+                })
                 setOpen(false)
                 setSelectedUserId('')
             } catch (error) {
                 console.error('Error adding user to group:', error)
-                alert(
-                    `Failed to add user to group: ${error instanceof Error ? error.message : String(error)}`,
-                )
+                toast.error('Failed to add user to group', {
+                    description:
+                        error instanceof Error
+                            ? error.message
+                            : String(error),
+                })
             }
         } else {
-            alert('User is already a member of this group')
+            toast.warning('User already in group', {
+                description: 'This user is already a member of this group.',
+            })
         }
     }
 

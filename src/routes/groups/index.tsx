@@ -87,9 +87,11 @@ function GroupsPage() {
 
             {userGroups && userGroups.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {userGroups.map((group: Group) => (
-                        <GroupCard key={group.id} group={group} />
-                    ))}
+                    {userGroups
+                        .filter((group: Group) => group.id)
+                        .map((group: Group) => (
+                            <GroupCard key={group.id} group={group} />
+                        ))}
                 </div>
             ) : (
                 <Card className="text-center py-12">
@@ -108,10 +110,14 @@ function GroupsPage() {
 }
 
 function GroupCard({ group }: { group: Group }) {
+    // Ensure group.id is defined - Group type guarantees id is a string
+    const groupId = group?.id ?? ''
+    
+    // Hooks must be called unconditionally
     const groupMembers = useLiveQuery((q) =>
         q
             .from({ member: groupMembersCollection })
-            .where(({ member }) => member.groupId === group.id)
+            .where(({ member }) => member.groupId === groupId)
             .select(({ member }) => ({ ...member })),
     )
     const users = useLiveQuery((q) =>
@@ -119,6 +125,11 @@ function GroupCard({ group }: { group: Group }) {
             ...user,
         })),
     )
+    
+    // Early return after hooks if groupId is invalid
+    if (!groupId) {
+        return null
+    }
 
     const memberCount =
         (groupMembers.data as GroupMember[] | undefined)?.length ?? 0
