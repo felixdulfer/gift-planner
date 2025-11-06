@@ -1,8 +1,6 @@
-import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { Plus } from 'lucide-react'
-
-import { eventsCollection } from '@/db-collections'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
     Dialog,
@@ -16,6 +14,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { eventsCollection } from '@/db-collections'
 import {
     generateId,
     getCurrentTimestamp,

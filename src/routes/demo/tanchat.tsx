@@ -1,15 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useChat } from '@ai-sdk/react'
 import { createFileRoute } from '@tanstack/react-router'
+import type { UIMessage } from 'ai'
+import { DefaultChatTransport } from 'ai'
 import { Send } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
+import rehypeHighlight from 'rehype-highlight'
 import rehypeRaw from 'rehype-raw'
 import rehypeSanitize from 'rehype-sanitize'
-import rehypeHighlight from 'rehype-highlight'
 import remarkGfm from 'remark-gfm'
-import { useChat } from '@ai-sdk/react'
-import { DefaultChatTransport } from 'ai'
-
-import type { UIMessage } from 'ai'
 
 import GuitarRecommendation from '@/components/example-GuitarRecommendation'
 

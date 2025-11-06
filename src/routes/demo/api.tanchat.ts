@@ -1,5 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router'
 import { anthropic } from '@ai-sdk/anthropic'
+import { createFileRoute } from '@tanstack/react-router'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
 
 import getTools from '@/utils/demo.tools'

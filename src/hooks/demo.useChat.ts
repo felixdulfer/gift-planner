@@ -1,9 +1,7 @@
-import { useEffect, useRef } from 'react'
-import { useLiveQuery } from '@tanstack/react-db'
-
-import { messagesCollection, type Message } from '@/db-collections'
-
 import type { Collection } from '@tanstack/db'
+import { useLiveQuery } from '@tanstack/react-db'
+import { useEffect, useRef } from 'react'
+import { type Message, messagesCollection } from '@/db-collections'
 
 function useStreamConnection<TDocument>(
     url: string,

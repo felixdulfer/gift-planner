@@ -1,13 +1,7 @@
-import { useState } from 'react'
+import { useLiveQuery } from '@tanstack/react-db'
 import { useForm } from '@tanstack/react-form'
 import { Plus } from 'lucide-react'
-import { useLiveQuery } from '@tanstack/react-db'
-
-import {
-    groupsCollection,
-    groupMembersCollection,
-    usersCollection,
-} from '@/db-collections'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
     Dialog,
@@ -21,6 +15,11 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import {
+    groupMembersCollection,
+    groupsCollection,
+    usersCollection,
+} from '@/db-collections'
 import {
     generateId,
     getCurrentTimestamp,

@@ -1,13 +1,7 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
 import { useLiveQuery } from '@tanstack/react-db'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { Users } from 'lucide-react'
-
-import {
-    groupsCollection,
-    groupMembersCollection,
-    usersCollection,
-    type Group,
-} from '@/db-collections'
+import { CreateGroupDialog } from '@/components/gift-planner/CreateGroupDialog'
 import { Button } from '@/components/ui/button'
 import {
     Card,
@@ -16,8 +10,13 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card'
+import {
+    type Group,
+    groupMembersCollection,
+    groupsCollection,
+    usersCollection,
+} from '@/db-collections'
 import { getCurrentUserId } from '@/utils/gift-planner'
-import { CreateGroupDialog } from '@/components/gift-planner/CreateGroupDialog'
 import { usePersistCollection } from '@/utils/persistence'
 
 export const Route = createFileRoute('/groups/')({
