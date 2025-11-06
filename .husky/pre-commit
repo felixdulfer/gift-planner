@@ -1,1 +1,1 @@
-bun run test || true
+bun run check || true
