@@ -44,19 +44,22 @@ export function AddUserDialog() {
 			const now = getCurrentTimestamp();
 
 			try {
-				usersCollection.insert({
+				const userData = {
 					id: generateId(),
-					name: value.name,
-					email:
-						value.email && value.email.trim() ? value.email.trim() : undefined,
+					name: value.name.trim(),
+					email: value.email?.trim() || undefined,
 					createdAt: now,
-				});
+				};
+
+				usersCollection.insert(userData);
 
 				setOpen(false);
 				form.reset();
 			} catch (error) {
 				console.error("Error adding user:", error);
-				// You might want to show an error message to the user here
+				alert(
+					`Failed to add user: ${error instanceof Error ? error.message : String(error)}`,
+				);
 			}
 		},
 	});
@@ -75,10 +78,10 @@ export function AddUserDialog() {
 					<DialogDescription>Add a new user to the system</DialogDescription>
 				</DialogHeader>
 				<form
-					onSubmit={(e) => {
+					onSubmit={async (e) => {
 						e.preventDefault();
 						e.stopPropagation();
-						form.handleSubmit();
+						await form.handleSubmit();
 					}}
 				>
 					<div className="grid gap-4 py-4">
@@ -86,7 +89,7 @@ export function AddUserDialog() {
 							name="name"
 							validators={{
 								onChange: ({ value }) =>
-									!value ? "Name is required" : undefined,
+									!value?.trim() ? "Name is required" : undefined,
 							}}
 						>
 							{(field) => (
@@ -106,7 +109,22 @@ export function AddUserDialog() {
 								</div>
 							)}
 						</form.Field>
-						<form.Field name="email">
+						<form.Field
+							name="email"
+							validators={{
+								onChange: ({ value }) => {
+									if (!value || !value.trim()) {
+										return undefined // Empty email is allowed
+									}
+									// Validate email format if provided
+									const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+									if (!emailRegex.test(value.trim())) {
+										return "Please enter a valid email address"
+									}
+									return undefined
+								},
+							}}
+						>
 							{(field) => (
 								<div className="grid gap-2">
 									<Label htmlFor={field.name}>Email (optional)</Label>
@@ -117,12 +135,19 @@ export function AddUserDialog() {
 										onChange={(e) => field.handleChange(e.target.value)}
 										onBlur={field.handleBlur}
 									/>
+									{field.state.meta.errors && (
+										<p className="text-sm text-destructive">
+											{field.state.meta.errors[0]}
+										</p>
+									)}
 								</div>
 							)}
 						</form.Field>
 					</div>
 					<DialogFooter>
-						<Button type="submit">Add User</Button>
+						<Button type="submit" disabled={form.state.isSubmitting}>
+							{form.state.isSubmitting ? "Adding..." : "Add User"}
+						</Button>
 					</DialogFooter>
 				</form>
 			</DialogContent>

@@ -1,6 +1,7 @@
 // localStorage persistence utility for TanStack DB collections
-import { useEffect } from "react";
+
 import type { Collection } from "@tanstack/db";
+import { useEffect } from "react";
 
 const STORAGE_PREFIX = "gift-planner-db-";
 

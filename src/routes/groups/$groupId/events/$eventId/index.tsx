@@ -1,15 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
 import { useLiveQuery } from "@tanstack/react-db";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Gift, UserPlus } from "lucide-react";
-
-import {
-	eventsCollection,
-	receiversCollection,
-	wishlistsCollection,
-	giftsCollection,
-	giftAssignmentsCollection,
-	usersCollection,
-} from "@/db-collections";
+import { CreateReceiverDialog } from "@/components/gift-planner/CreateReceiverDialog";
+import { ReceiverCard } from "@/components/gift-planner/ReceiverCard";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -19,8 +12,14 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { CreateReceiverDialog } from "@/components/gift-planner/CreateReceiverDialog";
-import { ReceiverCard } from "@/components/gift-planner/ReceiverCard";
+import {
+	eventsCollection,
+	giftAssignmentsCollection,
+	giftsCollection,
+	receiversCollection,
+	usersCollection,
+	wishlistsCollection,
+} from "@/db-collections";
 import { usePersistCollection } from "@/utils/persistence";
 
 export const Route = createFileRoute("/groups/$groupId/events/$eventId/")({
