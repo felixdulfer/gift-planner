@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import viteReact from '@vitejs/plugin-react'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
 import tailwindcss from '@tailwindcss/vite'
-import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
+import { tanstackRouter } from '@tanstack/router-plugin/vite'
 
 const isGitHubPages = process.env.GITHUB_PAGES === 'true'
 
@@ -17,7 +17,7 @@ const config = defineConfig({
 			projects: ['./tsconfig.json'],
 		}),
 		tailwindcss(),
-		TanStackRouterVite(),
+		tanstackRouter(),
 		viteReact({
 			babel: {
 				plugins: ['babel-plugin-react-compiler'],
