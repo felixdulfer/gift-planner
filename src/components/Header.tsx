@@ -6,7 +6,6 @@ import {
     ClipboardType,
     Database,
     Gift,
-    Guitar,
     Home,
     Menu,
     MessagesSquare,
@@ -300,19 +299,6 @@ export default function Header() {
                     >
                         <MessagesSquare size={20} />
                         <span className="font-medium">Chat</span>
-                    </Link>
-
-                    <Link
-                        to="/example/guitars"
-                        onClick={() => setIsOpen(false)}
-                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
-                        activeProps={{
-                            className:
-                                'flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2',
-                        }}
-                    >
-                        <Guitar size={20} />
-                        <span className="font-medium">Guitar Demo</span>
                     </Link>
 
                     {/* Demo Links End */}

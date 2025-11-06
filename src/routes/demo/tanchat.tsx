@@ -10,8 +10,6 @@ import rehypeRaw from 'rehype-raw'
 import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
 
-import GuitarRecommendation from '@/components/example-GuitarRecommendation'
-
 import './tanchat.css'
 
 function InitalLayout({ children }: { children: React.ReactNode }) {
@@ -96,25 +94,6 @@ function Messages({ messages }: { messages: Array<UIMessage> }) {
                                                 >
                                                     {part.text}
                                                 </ReactMarkdown>
-                                            </div>
-                                        )
-                                    }
-                                    if (
-                                        part.type === 'tool-recommendGuitar' &&
-                                        part.state === 'output-available' &&
-                                        (part.output as { id: string })?.id
-                                    ) {
-                                        const toolId = (
-                                            part.output as { id: string }
-                                        )?.id
-                                        return (
-                                            <div
-                                                key={`${id}-tool-${toolId}`}
-                                                className="max-w-[80%] mx-auto"
-                                            >
-                                                <GuitarRecommendation
-                                                    id={toolId}
-                                                />
                                             </div>
                                         )
                                     }

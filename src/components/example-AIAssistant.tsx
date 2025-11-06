@@ -10,7 +10,6 @@ import rehypeHighlight from 'rehype-highlight'
 import rehypeRaw from 'rehype-raw'
 import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
-import GuitarRecommendation from './example-GuitarRecommendation'
 
 export const showAIAssistant = new Store(false)
 
@@ -71,21 +70,6 @@ function Messages({ messages }: { messages: Array<UIMessage> }) {
                                             {part.text}
                                         </ReactMarkdown>
                                     </div>
-                                </div>
-                            )
-                        }
-                        if (
-                            part.type === 'tool-recommendGuitar' &&
-                            part.state === 'output-available' &&
-                            (part.output as { id: string })?.id
-                        ) {
-                            const toolId = (part.output as { id: string })?.id
-                            return (
-                                <div
-                                    key={`${id}-tool-${toolId}`}
-                                    className="max-w-[80%] mx-auto"
-                                >
-                                    <GuitarRecommendation id={toolId} />
                                 </div>
                             )
                         }

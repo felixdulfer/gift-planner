@@ -4,12 +4,9 @@ import { convertToModelMessages, stepCountIs, streamText } from 'ai'
 
 import getTools from '@/utils/demo.tools'
 
-const SYSTEM_PROMPT = `You are a helpful assistant for a store that sells guitars.
+const SYSTEM_PROMPT = `You are a helpful assistant.
 
 You can use the following tools to help the user:
-
-- getGuitars: Get all guitars from the database
-- recommendGuitar: Recommend a guitar to the user
 `
 
 export const Route = createFileRoute('/demo/api/tanchat')({
