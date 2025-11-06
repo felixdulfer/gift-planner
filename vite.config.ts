@@ -5,6 +5,7 @@ import viteTsConfigPaths from 'vite-tsconfig-paths'
 import tailwindcss from '@tailwindcss/vite'
 
 const config = defineConfig({
+  base: process.env.GITHUB_PAGES ? '/gift-planner/' : '/',
   plugins: [
     // this is the plugin that enables path aliases
     viteTsConfigPaths({

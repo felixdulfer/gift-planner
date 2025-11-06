@@ -17,6 +17,35 @@ To build this application for production:
 bun run build
 ```
 
+## Deployment
+
+This application is configured for deployment to GitHub Pages. The deployment is automated via GitHub Actions.
+
+### GitHub Pages Setup
+
+1. **Enable GitHub Pages** in your repository settings:
+   - Go to Settings → Pages
+   - Under "Source", select "GitHub Actions"
+
+2. **Automatic Deployment**:
+   - The app automatically deploys when you push to the `main` branch
+   - The workflow builds the app and deploys it to GitHub Pages
+   - Your app will be available at `https://<username>.github.io/gift-planner/`
+
+3. **Manual Deployment**:
+   - You can also trigger deployment manually from the Actions tab
+
+### Configuration
+
+The app is configured with:
+- Base path: `/gift-planner/` (for GitHub Pages)
+- Build output: `dist/client` directory
+- Automatic base path detection via environment variables
+
+If you need to change the repository name, update the base path in:
+- `vite.config.ts` - Update the `base` config
+- `.github/workflows/deploy.yml` - The workflow will automatically use the correct base path
+
 ## Testing
 
 This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
