@@ -9,6 +9,7 @@
     "test": "vitest run",
     "format": "biome format",
     "lint": "biome lint",
+    "lint:fix": "biome lint --write",
     "check": "biome check",
     "markdownlint": "markdownlint README.md .cursorrules",
     "storybook": "storybook dev -p 6006",
