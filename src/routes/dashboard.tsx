@@ -36,7 +36,7 @@ import { getCurrentTimestamp, getCurrentUserId } from '@/utils/gift-planner'
 import { usePersistCollection } from '@/utils/persistence'
 
 export const Route = createFileRoute('/dashboard')({
-	component: DashboardPage,
+    component: DashboardPage,
 })
 
 function DashboardPage() {

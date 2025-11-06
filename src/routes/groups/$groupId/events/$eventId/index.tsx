@@ -33,7 +33,7 @@ import { useStoreQuery } from '@/hooks/useLiveQuery'
 import { usePersistCollection } from '@/utils/persistence'
 
 export const Route = createFileRoute('/groups/$groupId/events/$eventId/')({
-	component: EventDetailPage,
+    component: EventDetailPage,
 })
 
 function EventDetailPage() {

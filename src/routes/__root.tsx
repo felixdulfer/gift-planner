@@ -1,10 +1,10 @@
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import type { QueryClient } from '@tanstack/react-query'
 import {
-	createRootRouteWithContext,
-	Link,
-	Outlet,
-	useRouterState,
+    createRootRouteWithContext,
+    Link,
+    Outlet,
+    useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { Button } from '@/components/ui/button'
@@ -16,50 +16,50 @@ import { ThemeProvider } from '../components/ThemeProvider'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 
 interface MyRouterContext {
-	queryClient: QueryClient
+    queryClient: QueryClient
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
-	component: RootComponent,
-	notFoundComponent: NotFound,
+    component: RootComponent,
+    notFoundComponent: NotFound,
 })
 
 function RootComponent() {
-	const router = useRouterState()
-	const isHomePage = router.location.pathname === '/'
+    const router = useRouterState()
+    const isHomePage = router.location.pathname === '/'
 
-	const content = isHomePage ? (
-		<Outlet />
-	) : (
-		<SidebarProvider>
-			<AppSidebar />
-			<Outlet />
-		</SidebarProvider>
-	)
+    const content = isHomePage ? (
+        <Outlet />
+    ) : (
+        <SidebarProvider>
+            <AppSidebar />
+            <Outlet />
+        </SidebarProvider>
+    )
 
-	return (
-		<ThemeProvider
-			attribute="class"
-			defaultTheme="system"
-			enableSystem
-			disableTransitionOnChange
-		>
-			{content}
-			<Toaster />
-			<TanStackDevtools
-				config={{
-					position: 'bottom-right',
-				}}
-				plugins={[
-					{
-						name: 'Tanstack Router',
-						render: <TanStackRouterDevtoolsPanel />,
-					},
-					TanStackQueryDevtools,
-				]}
-			/>
-		</ThemeProvider>
-	)
+    return (
+        <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+        >
+            {content}
+            <Toaster />
+            <TanStackDevtools
+                config={{
+                    position: 'bottom-right',
+                }}
+                plugins={[
+                    {
+                        name: 'Tanstack Router',
+                        render: <TanStackRouterDevtoolsPanel />,
+                    },
+                    TanStackQueryDevtools,
+                ]}
+            />
+        </ThemeProvider>
+    )
 }
 
 function NotFound() {
