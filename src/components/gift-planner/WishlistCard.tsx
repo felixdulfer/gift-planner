@@ -60,7 +60,7 @@ export function WishlistCard({
                                       (u) =>
                                           u.id === assignment.assignedToUserId,
                                   )
-                                : null
+                                : undefined
 
                             return (
                                 <GiftCard

@@ -50,8 +50,8 @@ export function GiftCard({
     const handleAssign = (userId: string) => {
         if (assignment) {
             // Update existing assignment
-            giftAssignmentsCollection.update(assignment.id, {
-                assignedToUserId: userId,
+            giftAssignmentsCollection.update(assignment.id, (draft) => {
+                draft.assignedToUserId = userId
             })
         } else {
             // Create new assignment
@@ -68,9 +68,9 @@ export function GiftCard({
 
     const handleMarkPurchased = () => {
         if (assignment) {
-            giftAssignmentsCollection.update(assignment.id, {
-                isPurchased: true,
-                purchasedAt: getCurrentTimestamp(),
+            giftAssignmentsCollection.update(assignment.id, (draft) => {
+                draft.isPurchased = true
+                draft.purchasedAt = getCurrentTimestamp()
             })
         }
     }

@@ -1,6 +1,5 @@
 // localStorage persistence utility for TanStack DB collections
 
-import type { Collection } from '@tanstack/db'
 import { useEffect } from 'react'
 
 const STORAGE_PREFIX = 'gift-planner-db-'
@@ -32,8 +31,9 @@ export function saveToStorage<T>(collectionName: string, data: T[]): void {
     }
 }
 
-export function initializeCollectionFromStorage<T>(
-    collection: Collection<T, unknown, unknown>,
+export function initializeCollectionFromStorage<T extends object>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    collection: { insert: (item: T) => void },
     collectionName: string,
 ): void {
     const storedData = loadFromStorage<T>(collectionName)
@@ -49,8 +49,9 @@ export function initializeCollectionFromStorage<T>(
 }
 
 // Hook to sync collection to localStorage
-export function usePersistCollection<T>(
-    collection: Collection<T, unknown, unknown>,
+export function usePersistCollection<T extends object>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    collection: { insert: (item: T) => void },
     collectionName: string,
     data: T[] | undefined,
 ): void {

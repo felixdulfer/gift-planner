@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea'
 import {
     groupMembersCollection,
     groupsCollection,
+    type User,
     usersCollection,
 } from '@/db-collections'
 import {
@@ -29,9 +30,11 @@ import {
 export function CreateGroupDialog() {
     const [open, setOpen] = useState(false)
     const currentUserId = getCurrentUserId()
-    const users = useLiveQuery(usersCollection, () => ({
-        filter: {},
-    }))
+    const users = useLiveQuery((q) =>
+        q.from({ user: usersCollection }).select(({ user }) => ({
+            ...user,
+        })),
+    )
 
     const form = useForm({
         defaultValues: {
@@ -42,7 +45,9 @@ export function CreateGroupDialog() {
             const now = getCurrentTimestamp()
 
             // Ensure current user exists
-            const existingUser = users.data?.find((u) => u.id === currentUserId)
+            const existingUser = (users.data as User[] | undefined)?.find(
+                (u: User) => u.id === currentUserId,
+            )
             if (!existingUser) {
                 usersCollection.insert({
                     id: currentUserId,

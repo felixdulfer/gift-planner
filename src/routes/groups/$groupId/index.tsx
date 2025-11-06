@@ -17,9 +17,13 @@ import {
 } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import {
+    type Event,
     eventsCollection,
+    type Group,
+    type GroupMember,
     groupMembersCollection,
     groupsCollection,
+    type User,
     usersCollection,
 } from '@/db-collections'
 import { usePersistCollection } from '@/utils/persistence'
@@ -31,35 +35,60 @@ export const Route = createFileRoute('/groups/$groupId/')({
 
 function GroupDetailPage() {
     const { groupId } = Route.useParams()
-    const group = useLiveQuery(groupsCollection, () => ({
-        filter: { id: groupId },
-        single: true,
-    }))
-    const events = useLiveQuery(eventsCollection, () => ({
-        filter: { groupId },
-    }))
-    const groupMembers = useLiveQuery(groupMembersCollection, () => ({
-        filter: { groupId },
-    }))
-    const users = useLiveQuery(usersCollection, () => ({
-        filter: {},
-    }))
+    const group = useLiveQuery((q) =>
+        q
+            .from({ group: groupsCollection })
+            .where(({ group }) => group.id === groupId)
+            .select(({ group }) => ({ ...group })),
+    )
+    const events = useLiveQuery((q) =>
+        q
+            .from({ event: eventsCollection })
+            .where(({ event }) => event.groupId === groupId)
+            .select(({ event }) => ({ ...event })),
+    )
+    const groupMembers = useLiveQuery((q) =>
+        q
+            .from({ member: groupMembersCollection })
+            .where(({ member }) => member.groupId === groupId)
+            .select(({ member }) => ({ ...member })),
+    )
+    const users = useLiveQuery((q) =>
+        q.from({ user: usersCollection }).select(({ user }) => ({
+            ...user,
+        })),
+    )
 
     // Persist collections
     // Get all groups for persistence (not just the single one)
-    const allGroups = useLiveQuery(groupsCollection, () => ({
-        filter: {},
-    }))
-    usePersistCollection(eventsCollection, 'events', events.data)
+    const allGroups = useLiveQuery((q) =>
+        q.from({ group: groupsCollection }).select(({ group }) => ({
+            ...group,
+        })),
+    )
+    usePersistCollection(
+        eventsCollection,
+        'events',
+        events.data as Event[] | undefined,
+    )
     usePersistCollection(
         groupMembersCollection,
         'groupMembers',
-        groupMembers.data,
+        groupMembers.data as GroupMember[] | undefined,
     )
-    usePersistCollection(usersCollection, 'users', users.data)
-    usePersistCollection(groupsCollection, 'groups', allGroups.data)
+    usePersistCollection(
+        usersCollection,
+        'users',
+        users.data as User[] | undefined,
+    )
+    usePersistCollection(
+        groupsCollection,
+        'groups',
+        allGroups.data as Group[] | undefined,
+    )
 
-    if (!group.data) {
+    const groupData = (group.data as Group[] | undefined)?.[0]
+    if (!groupData) {
         return (
             <div className="container mx-auto py-8 px-4">
                 <p>Group not found</p>
@@ -67,10 +96,13 @@ function GroupDetailPage() {
         )
     }
 
-    const memberCount = groupMembers.data?.length ?? 0
-    const memberNames = groupMembers.data
-        ?.map((member) => {
-            const user = users.data?.find((u) => u.id === member.userId)
+    const memberCount =
+        (groupMembers.data as GroupMember[] | undefined)?.length ?? 0
+    const memberNames = (groupMembers.data as GroupMember[] | undefined)
+        ?.map((member: GroupMember) => {
+            const user = (users.data as User[] | undefined)?.find(
+                (u: User) => u.id === member.userId,
+            )
             return user?.name ?? 'Unknown'
         })
         .slice(0, 5)
@@ -86,12 +118,10 @@ function GroupDetailPage() {
                 </Link>
                 <div className="flex items-start justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold">
-                            {group.data.name}
-                        </h1>
-                        {group.data.description && (
+                        <h1 className="text-3xl font-bold">{groupData.name}</h1>
+                        {groupData.description && (
                             <p className="text-muted-foreground mt-2">
-                                {group.data.description}
+                                {groupData.description}
                             </p>
                         )}
                         <div className="flex items-center gap-4 mt-4">
@@ -105,7 +135,7 @@ function GroupDetailPage() {
                         </div>
                         {memberNames && memberNames.length > 0 && (
                             <div className="flex flex-wrap gap-2 mt-3">
-                                {memberNames.map((name) => (
+                                {memberNames.map((name: string) => (
                                     <Badge key={name} variant="secondary">
                                         {name}
                                     </Badge>
@@ -125,9 +155,10 @@ function GroupDetailPage() {
 
             <div>
                 <h2 className="text-2xl font-semibold mb-4">Events</h2>
-                {events.data && events.data.length > 0 ? (
+                {(events.data as Event[] | undefined) &&
+                (events.data as Event[]).length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {events.data.map((event) => (
+                        {(events.data as Event[]).map((event: Event) => (
                             <EventCard
                                 key={event.id}
                                 event={event}

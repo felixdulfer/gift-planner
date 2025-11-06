@@ -21,7 +21,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { groupMembersCollection, usersCollection } from '@/db-collections'
+import {
+    type GroupMember,
+    groupMembersCollection,
+    type User,
+    usersCollection,
+} from '@/db-collections'
 import { generateId, getCurrentTimestamp } from '@/utils/gift-planner'
 
 export function AddUserDialog() {
@@ -162,21 +167,26 @@ export function AddUserDialog() {
 
 export function JoinGroupDialog({ groupId }: { groupId: string }) {
     const [open, setOpen] = useState(false)
-    const users = useLiveQuery(usersCollection, () => ({
-        filter: {},
-    }))
-    const groupMembers = useLiveQuery(groupMembersCollection, () => ({
-        filter: { groupId },
-    }))
+    const users = useLiveQuery((q) =>
+        q.from({ user: usersCollection }).select(({ user }) => ({
+            ...user,
+        })),
+    )
+    const groupMembers = useLiveQuery((q) =>
+        q
+            .from({ member: groupMembersCollection })
+            .where(({ member }) => member.groupId === groupId)
+            .select(({ member }) => ({ ...member })),
+    )
     const [selectedUserId, setSelectedUserId] = useState<string>('')
 
     const handleJoin = () => {
         if (!selectedUserId) return
 
         const now = getCurrentTimestamp()
-        const existingMember = groupMembers.data?.find(
-            (m) => m.userId === selectedUserId,
-        )
+        const existingMember = (
+            groupMembers.data as GroupMember[] | undefined
+        )?.find((m: GroupMember) => m.userId === selectedUserId)
 
         if (!existingMember) {
             try {
@@ -200,9 +210,13 @@ export function JoinGroupDialog({ groupId }: { groupId: string }) {
     }
 
     // Filter out users who are already members
-    const availableUsers = users.data?.filter((user) => {
-        return !groupMembers.data?.some((member) => member.userId === user.id)
-    })
+    const availableUsers = (users.data as User[] | undefined)?.filter(
+        (user: User) => {
+            return !(groupMembers.data as GroupMember[] | undefined)?.some(
+                (member: GroupMember) => member.userId === user.id,
+            )
+        },
+    )
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -231,7 +245,7 @@ export function JoinGroupDialog({ groupId }: { groupId: string }) {
                                     <SelectValue placeholder="Choose a user" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {availableUsers.map((user) => (
+                                    {availableUsers.map((user: User) => (
                                         <SelectItem
                                             key={user.id}
                                             value={user.id}
@@ -246,13 +260,15 @@ export function JoinGroupDialog({ groupId }: { groupId: string }) {
                     ) : (
                         <div className="text-center py-4">
                             <p className="text-sm text-muted-foreground mb-4">
-                                {users.data && users.data.length === 0
+                                {(users.data as User[] | undefined) &&
+                                (users.data as User[]).length === 0
                                     ? 'No users exist yet. Create a user first.'
                                     : 'All users are already members of this group.'}
                             </p>
-                            {users.data && users.data.length === 0 && (
-                                <AddUserDialog />
-                            )}
+                            {(users.data as User[] | undefined) &&
+                                (users.data as User[]).length === 0 && (
+                                    <AddUserDialog />
+                                )}
                         </div>
                     )}
                 </div>

@@ -12,8 +12,10 @@ import {
 } from '@/components/ui/card'
 import {
     type Group,
+    type GroupMember,
     groupMembersCollection,
     groupsCollection,
+    type User,
     usersCollection,
 } from '@/db-collections'
 import { getCurrentUserId } from '@/utils/gift-planner'
@@ -27,32 +29,49 @@ export const Route = createFileRoute('/groups/')({
 function GroupsPage() {
     const currentUserId = getCurrentUserId()
 
-    const groups = useLiveQuery(groupsCollection, () => ({
-        filter: {},
-    }))
-    const groupMembers = useLiveQuery(groupMembersCollection, () => ({
-        filter: {},
-    }))
-    const users = useLiveQuery(usersCollection, () => ({
-        filter: {},
-    }))
+    const groups = useLiveQuery((q) =>
+        q.from({ group: groupsCollection }).select(({ group }) => ({
+            ...group,
+        })),
+    )
+    const groupMembers = useLiveQuery((q) =>
+        q.from({ member: groupMembersCollection }).select(({ member }) => ({
+            ...member,
+        })),
+    )
+    const users = useLiveQuery((q) =>
+        q.from({ user: usersCollection }).select(({ user }) => ({
+            ...user,
+        })),
+    )
 
     // Persist collections to localStorage
-    usePersistCollection(usersCollection, 'users', users.data)
-    usePersistCollection(groupsCollection, 'groups', groups.data)
+    usePersistCollection(
+        usersCollection,
+        'users',
+        users.data as User[] | undefined,
+    )
+    usePersistCollection(
+        groupsCollection,
+        'groups',
+        groups.data as Group[] | undefined,
+    )
     usePersistCollection(
         groupMembersCollection,
         'groupMembers',
-        groupMembers.data,
+        groupMembers.data as GroupMember[] | undefined,
     )
 
     // Get groups the current user is a member of
-    const userGroups = groups.data?.filter((group) => {
-        return groupMembers.data?.some(
-            (member) =>
-                member.groupId === group.id && member.userId === currentUserId,
-        )
-    })
+    const userGroups = (groups.data as Group[] | undefined)?.filter(
+        (group: Group) => {
+            return (groupMembers.data as GroupMember[] | undefined)?.some(
+                (member: GroupMember) =>
+                    member.groupId === group.id &&
+                    member.userId === currentUserId,
+            )
+        },
+    )
 
     return (
         <div className="container mx-auto py-8 px-4 max-w-6xl">
@@ -68,7 +87,7 @@ function GroupsPage() {
 
             {userGroups && userGroups.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {userGroups.map((group) => (
+                    {userGroups.map((group: Group) => (
                         <GroupCard key={group.id} group={group} />
                     ))}
                 </div>
@@ -89,17 +108,25 @@ function GroupsPage() {
 }
 
 function GroupCard({ group }: { group: Group }) {
-    const groupMembers = useLiveQuery(groupMembersCollection, () => ({
-        filter: { groupId: group.id },
-    }))
-    const users = useLiveQuery(usersCollection, () => ({
-        filter: {},
-    }))
+    const groupMembers = useLiveQuery((q) =>
+        q
+            .from({ member: groupMembersCollection })
+            .where(({ member }) => member.groupId === group.id)
+            .select(({ member }) => ({ ...member })),
+    )
+    const users = useLiveQuery((q) =>
+        q.from({ user: usersCollection }).select(({ user }) => ({
+            ...user,
+        })),
+    )
 
-    const memberCount = groupMembers.data?.length ?? 0
-    const memberNames = groupMembers.data
-        ?.map((member) => {
-            const user = users.data?.find((u) => u.id === member.userId)
+    const memberCount =
+        (groupMembers.data as GroupMember[] | undefined)?.length ?? 0
+    const memberNames = (groupMembers.data as GroupMember[] | undefined)
+        ?.map((member: GroupMember) => {
+            const user = (users.data as User[] | undefined)?.find(
+                (u: User) => u.id === member.userId,
+            )
             return user?.name ?? 'Unknown'
         })
         .slice(0, 3)
