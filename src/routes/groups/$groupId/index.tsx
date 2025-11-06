@@ -21,16 +21,13 @@ import { Separator } from '@/components/ui/separator'
 import { SidebarInset } from '@/components/ui/sidebar'
 import {
     type Event,
-    eventsCollection,
     eventsStore,
     type Group,
     type GroupMember,
-    groupMembersCollection,
     groupMembersStore,
     groupsCollection,
     groupsStore,
     type User,
-    usersCollection,
     usersStore,
 } from '@/db-collections'
 import { useStoreQuery } from '@/hooks/useLiveQuery'
@@ -257,7 +254,7 @@ function EditableGroupName({
                     value={editedName}
                     onChange={(e) => setEditedName(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    className="!text-3xl !font-bold h-auto py-2 px-3 -ml-3"
+                    className="text-3xl! font-bold! h-auto py-2 px-3 -ml-3"
                     style={{ fontSize: '1.875rem' }}
                 />
                 <Button
@@ -282,13 +279,14 @@ function EditableGroupName({
 
     return (
         <div className="group relative inline-flex items-center gap-2">
-            <h1
-                className="text-3xl font-bold cursor-pointer transition-all group-hover:outline group-hover:outline-2 group-hover:outline-primary/20 group-hover:rounded-md group-hover:px-2 group-hover:-mx-2"
+            <button
+                type="button"
+                className="text-3xl font-bold cursor-pointer transition-all group-hover:outline-2 group-hover:outline-primary/20 group-hover:rounded-md group-hover:px-2 group-hover:-mx-2"
                 onClick={() => setIsEditing(true)}
                 title="Click to edit"
             >
                 {name}
-            </h1>
+            </button>
             <Pencil className="w-4 h-4 opacity-0 group-hover:opacity-60 transition-opacity text-muted-foreground shrink-0" />
         </div>
     )

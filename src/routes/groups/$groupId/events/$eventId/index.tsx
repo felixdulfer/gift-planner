@@ -20,18 +20,13 @@ import {
     eventsStore,
     type Gift,
     type GiftAssignment,
-    giftAssignmentsCollection,
     giftAssignmentsStore,
-    giftsCollection,
     giftsStore,
     type Receiver,
-    receiversCollection,
     receiversStore,
     type User,
-    usersCollection,
     usersStore,
     type Wishlist,
-    wishlistsCollection,
     wishlistsStore,
 } from '@/db-collections'
 import { useStoreQuery } from '@/hooks/useLiveQuery'

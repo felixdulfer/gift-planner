@@ -24,12 +24,12 @@ export function SiteHeader() {
 
     // Extract groupId and eventId from pathname
     const pathSegments = pathname.split('/').filter(Boolean)
-    const groupIdIndex = pathSegments.findIndex((seg) => seg === 'groups')
+    const groupIdIndex = pathSegments.indexOf('groups')
     const groupId =
         groupIdIndex >= 0 && pathSegments[groupIdIndex + 1]
             ? pathSegments[groupIdIndex + 1]
             : null
-    const eventIdIndex = pathSegments.findIndex((seg) => seg === 'events')
+    const eventIdIndex = pathSegments.indexOf('events')
     const eventId =
         eventIdIndex >= 0 && pathSegments[eventIdIndex + 1]
             ? pathSegments[eventIdIndex + 1]
@@ -60,7 +60,7 @@ export function SiteHeader() {
     // Filter out 'dashboard' from breadcrumbs since it's the base route
     const breadcrumbSegments = pathSegments.filter((seg) => seg !== 'dashboard')
     const breadcrumbs = breadcrumbSegments.map((segment, index) => {
-        const path = '/' + breadcrumbSegments.slice(0, index + 1).join('/')
+        const path = `/${breadcrumbSegments.slice(0, index + 1).join('/')}`
         // Format segment names (e.g., "groups" -> "Groups", "groupId" -> "Group")
         let label = segment
         // Replace groupId with actual group name if available

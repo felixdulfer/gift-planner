@@ -1,4 +1,5 @@
 import { useStore } from '@tanstack/react-store'
+import type { Store } from '@tanstack/store'
 import { useMemo } from 'react'
 
 type StoreData<T> = {
@@ -9,8 +10,8 @@ type QueryFn<T> = (items: T[]) => T[]
 
 // Hook to replace useLiveQuery from TanStack DB
 export function useLiveQuery<T>(
-    queryFn: QueryFn<T>,
-    deps: unknown[] = [],
+    _queryFn: QueryFn<T>,
+    _deps: unknown[] = [],
 ): { data: T[] } {
     // This is a simplified version - we'll need to pass the store
     // For now, this is a placeholder that will be replaced per usage
@@ -30,7 +31,7 @@ export function useStoreQuery<T>(
 
     const data = useMemo(() => {
         return queryFn(items)
-    }, [items, ...deps])
+    }, [items, ...deps, queryFn])
 
     return { data }
 }

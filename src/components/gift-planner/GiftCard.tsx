@@ -1,11 +1,9 @@
 import { CheckCircle2, ExternalLink, ShoppingCart, User } from 'lucide-react'
-import { EditGiftDialog } from './EditGiftDialog'
 import { type ReactNode, useEffect, useId, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { giftsCollection } from '@/db-collections'
 import {
     Dialog,
     DialogContent,
@@ -26,6 +24,7 @@ import {
     type GiftAssignment,
     type Gift as GiftType,
     giftAssignmentsCollection,
+    giftsCollection,
     type User as UserType,
 } from '@/db-collections'
 import {
@@ -33,6 +32,7 @@ import {
     getCurrentTimestamp,
     getCurrentUserId,
 } from '@/utils/gift-planner'
+import { EditGiftDialog } from './EditGiftDialog'
 
 export function GiftCard({
     gift,
@@ -296,10 +296,7 @@ function AssignGiftDialog({
                 </div>
                 <DialogFooter className="flex justify-between">
                     {currentUserId && (
-                        <Button
-                            variant="destructive"
-                            onClick={handleUnassign}
-                        >
+                        <Button variant="destructive" onClick={handleUnassign}>
                             Unassign
                         </Button>
                     )}
@@ -314,7 +311,9 @@ function AssignGiftDialog({
                             onClick={handleAssign}
                             disabled={!selectedUserId}
                         >
-                            {currentUserId ? 'Change Assignment' : 'Assign Gift'}
+                            {currentUserId
+                                ? 'Change Assignment'
+                                : 'Assign Gift'}
                         </Button>
                     </div>
                 </DialogFooter>

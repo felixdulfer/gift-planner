@@ -66,7 +66,8 @@ export function CreateGiftDialog({ wishlistId }: { wishlistId: string }) {
                         const dataUrl = event.target?.result as string
                         form.setFieldValue('picture', dataUrl)
                         toast.success('Image pasted', {
-                            description: 'Image has been pasted from clipboard.',
+                            description:
+                                'Image has been pasted from clipboard.',
                         })
                     }
                     reader.onerror = () => {
@@ -158,10 +159,13 @@ export function CreateGiftDialog({ wishlistId }: { wishlistId: string }) {
                                                 alt="Preview"
                                                 className="max-w-full h-32 object-contain rounded border"
                                                 onError={() => {
-                                                    toast.error('Invalid image', {
-                                                        description:
-                                                            'Could not load the image. Please check the URL or try pasting again.',
-                                                    })
+                                                    toast.error(
+                                                        'Invalid image',
+                                                        {
+                                                            description:
+                                                                'Could not load the image. Please check the URL or try pasting again.',
+                                                        },
+                                                    )
                                                 }}
                                             />
                                         </div>
