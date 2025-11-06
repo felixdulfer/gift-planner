@@ -1,7 +1,7 @@
-import { useLiveQuery } from '@tanstack/react-db'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Users } from 'lucide-react'
 import { CreateGroupDialog } from '@/components/gift-planner/CreateGroupDialog'
+import { SiteHeader } from '@/components/SiteHeader'
 import { Button } from '@/components/ui/button'
 import {
     Card,
@@ -10,14 +10,16 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card'
+import { SidebarInset } from '@/components/ui/sidebar'
 import {
     type Group,
     type GroupMember,
-    groupMembersCollection,
-    groupsCollection,
+    groupMembersStore,
+    groupsStore,
     type User,
-    usersCollection,
+    usersStore,
 } from '@/db-collections'
+import { useStoreQuery } from '@/hooks/useLiveQuery'
 import { getCurrentUserId } from '@/utils/gift-planner'
 import { usePersistCollection } from '@/utils/persistence'
 
@@ -29,35 +31,19 @@ export const Route = createFileRoute('/groups/')({
 function GroupsPage() {
     const currentUserId = getCurrentUserId()
 
-    const groups = useLiveQuery((q) =>
-        q.from({ group: groupsCollection }).select(({ group }) => ({
-            ...group,
-        })),
-    )
-    const groupMembers = useLiveQuery((q) =>
-        q.from({ member: groupMembersCollection }).select(({ member }) => ({
-            ...member,
-        })),
-    )
-    const users = useLiveQuery((q) =>
-        q.from({ user: usersCollection }).select(({ user }) => ({
-            ...user,
-        })),
-    )
+    const groups = useStoreQuery(groupsStore, (items) => items)
+    const groupMembers = useStoreQuery(groupMembersStore, (items) => items)
+    const users = useStoreQuery(usersStore, (items) => items)
 
     // Persist collections to localStorage
+    usePersistCollection(usersStore, 'users', users.data as User[] | undefined)
     usePersistCollection(
-        usersCollection,
-        'users',
-        users.data as User[] | undefined,
-    )
-    usePersistCollection(
-        groupsCollection,
+        groupsStore,
         'groups',
         groups.data as Group[] | undefined,
     )
     usePersistCollection(
-        groupMembersCollection,
+        groupMembersStore,
         'groupMembers',
         groupMembers.data as GroupMember[] | undefined,
     )
@@ -74,62 +60,62 @@ function GroupsPage() {
     )
 
     return (
-        <div className="container mx-auto py-8 px-4 max-w-6xl">
-            <div className="flex items-center justify-between mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold">My Groups</h1>
-                    <p className="text-muted-foreground mt-2">
-                        Manage your gift planning groups
-                    </p>
-                </div>
-                <CreateGroupDialog />
-            </div>
-
-            {userGroups && userGroups.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {userGroups
-                        .filter((group: Group) => group.id)
-                        .map((group: Group) => (
-                            <GroupCard key={group.id} group={group} />
-                        ))}
-                </div>
-            ) : (
-                <Card className="text-center py-12">
-                    <CardContent>
-                        <Users className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-                        <CardTitle className="mb-2">No groups yet</CardTitle>
-                        <CardDescription className="mb-6">
-                            Create your first group to start planning gifts
-                        </CardDescription>
+        <SidebarInset>
+            <SiteHeader />
+            <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+                <div className="container mx-auto py-8 px-4 max-w-6xl">
+                    <div className="flex items-center justify-between mb-8">
+                        <div>
+                            <h1 className="text-3xl font-bold">My Groups</h1>
+                            <p className="text-muted-foreground mt-2">
+                                Manage your gift planning groups
+                            </p>
+                        </div>
                         <CreateGroupDialog />
-                    </CardContent>
-                </Card>
-            )}
-        </div>
+                    </div>
+
+                    {userGroups && userGroups.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {userGroups
+                                .filter((group: Group) => group.id)
+                                .map((group: Group) => (
+                                    <GroupCard key={group.id} group={group} />
+                                ))}
+                        </div>
+                    ) : (
+                        <Card className="text-center py-12">
+                            <CardContent>
+                                <Users className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                                <CardTitle className="mb-2">
+                                    No groups yet
+                                </CardTitle>
+                                <CardDescription className="mb-6">
+                                    Create your first group to start planning
+                                    gifts
+                                </CardDescription>
+                                <CreateGroupDialog />
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
+            </div>
+        </SidebarInset>
     )
 }
 
 function GroupCard({ group }: { group: Group }) {
-    // Ensure group.id is defined - Group type guarantees id is a string
-    const groupId = group?.id ?? ''
-    
-    // Hooks must be called unconditionally
-    const groupMembers = useLiveQuery((q) =>
-        q
-            .from({ member: groupMembersCollection })
-            .where(({ member }) => member.groupId === groupId)
-            .select(({ member }) => ({ ...member })),
+    const groupId: string = group.id
+
+    const groupMembers = useStoreQuery(
+        groupMembersStore,
+        (items) =>
+            (items as GroupMember[]).filter(
+                (member) => member.groupId === groupId,
+            ),
+        [groupId],
     )
-    const users = useLiveQuery((q) =>
-        q.from({ user: usersCollection }).select(({ user }) => ({
-            ...user,
-        })),
-    )
-    
-    // Early return after hooks if groupId is invalid
-    if (!groupId) {
-        return null
-    }
+
+    const users = useStoreQuery(usersStore, (items) => items)
 
     const memberCount =
         (groupMembers.data as GroupMember[] | undefined)?.length ?? 0

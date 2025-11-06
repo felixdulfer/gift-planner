@@ -75,5 +75,37 @@ test.describe('Gift Planner App', () => {
 		const noGroupsMessage = page.locator('text=No groups yet')
 		await expect(noGroupsMessage).toBeVisible({ timeout: 5000 })
 	})
+
+	test('should add a new group', async ({ page }) => {
+		const groupName = `Test Group ${Date.now()}`
+
+		await page.goto('/groups')
+		await page.waitForLoadState('networkidle')
+
+		// Open dialog
+		await page.getByRole('button', { name: 'Create Group' }).first().click()
+		await expect(page.getByRole('heading', { name: 'Create New Group' })).toBeVisible()
+
+		// Fill form using type to ensure onChange events fire
+		await page.getByLabel('Group Name').clear()
+		await page.getByLabel('Group Name').type(groupName)
+		await page.getByLabel('Description (optional)').clear()
+		await page.getByLabel('Description (optional)').type('Test description')
+		
+		// Wait for form state to update
+		await page.waitForTimeout(500)
+		
+		// Click submit button
+		await page.getByRole('button', { name: 'Create Group' }).last().click()
+		
+		// Wait for dialog to close
+		await expect(page.getByRole('heading', { name: 'Create New Group' })).not.toBeVisible({ timeout: 5000 })
+		
+		// Wait for async operations
+		await page.waitForTimeout(1000)
+
+		// Wait for group to appear in UI
+		await expect(page.getByText(groupName)).toBeVisible({ timeout: 10000 })
+	})
 })
 

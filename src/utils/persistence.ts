@@ -1,5 +1,6 @@
-// localStorage persistence utility for TanStack DB collections
+// localStorage persistence utility for TanStack Store collections
 
+import type { Store } from '@tanstack/store'
 import { useEffect } from 'react'
 
 const STORAGE_PREFIX = 'gift-planner-db-'
@@ -31,34 +32,37 @@ export function saveToStorage<T>(collectionName: string, data: T[]): void {
     }
 }
 
-export function initializeCollectionFromStorage<T extends object>(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    collection: { insert: (item: T) => void },
+type StoreData<T> = {
+    items: Map<string, T>
+}
+
+export function initializeCollectionFromStorage<T extends { id: string }>(
+    store: Store<StoreData<T>>,
     collectionName: string,
 ): void {
     const storedData = loadFromStorage<T>(collectionName)
 
-    // Insert all stored items into the collection
-    for (const item of storedData) {
-        try {
-            collection.insert(item)
-        } catch {
-            // Item might already exist, that's okay
-        }
+    if (storedData.length > 0) {
+        store.setState((state) => {
+            const newItems = new Map(state.items)
+            for (const item of storedData) {
+                newItems.set(item.id, item)
+            }
+            return { items: newItems }
+        })
     }
 }
 
-// Hook to sync collection to localStorage
-export function usePersistCollection<T extends object>(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    collection: { insert: (item: T) => void },
+// Hook to sync store to localStorage
+export function usePersistCollection<T extends { id: string }>(
+    store: Store<StoreData<T>>,
     collectionName: string,
     data: T[] | undefined,
 ): void {
     // Initialize from storage on mount
     useEffect(() => {
-        initializeCollectionFromStorage(collection, collectionName)
-    }, [collection, collectionName])
+        initializeCollectionFromStorage(store, collectionName)
+    }, [store, collectionName])
 
     // Save to storage whenever data changes
     useEffect(() => {

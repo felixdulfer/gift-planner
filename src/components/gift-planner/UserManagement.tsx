@@ -1,33 +1,35 @@
-import { useLiveQuery } from '@tanstack/react-db'
 import { useForm } from '@tanstack/react-form'
 import { UserPlus, Users } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
 } from '@/components/ui/select'
 import {
-    type GroupMember,
-    groupMembersCollection,
-    type User,
-    usersCollection,
+	type GroupMember,
+	groupMembersCollection,
+	groupMembersStore,
+	type User,
+	usersCollection,
+	usersStore,
 } from '@/db-collections'
+import { useStoreQuery } from '@/hooks/useLiveQuery'
 import { generateId, getCurrentTimestamp } from '@/utils/gift-planner'
 
 export function AddUserDialog() {
@@ -174,19 +176,14 @@ export function AddUserDialog() {
 }
 
 export function JoinGroupDialog({ groupId }: { groupId: string }) {
-    const [open, setOpen] = useState(false)
-    const users = useLiveQuery((q) =>
-        q.from({ user: usersCollection }).select(({ user }) => ({
-            ...user,
-        })),
-    )
-    const groupMembers = useLiveQuery((q) =>
-        q
-            .from({ member: groupMembersCollection })
-            .where(({ member }) => member.groupId === groupId)
-            .select(({ member }) => ({ ...member })),
-    )
-    const [selectedUserId, setSelectedUserId] = useState<string>('')
+	const [open, setOpen] = useState(false)
+	const users = useStoreQuery(usersStore, (items) => items)
+	const groupMembers = useStoreQuery(
+		groupMembersStore,
+		(items) => items.filter((m) => m.groupId === groupId),
+		[groupId],
+	)
+	const [selectedUserId, setSelectedUserId] = useState<string>('')
 
     const handleJoin = () => {
         if (!selectedUserId) return

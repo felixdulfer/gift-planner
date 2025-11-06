@@ -1,41 +1,38 @@
-import { useLiveQuery } from '@tanstack/react-db'
 import { useForm } from '@tanstack/react-form'
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
-    groupMembersCollection,
-    groupsCollection,
-    type User,
-    usersCollection,
+	groupMembersCollection,
+	groupsCollection,
+	type User,
+	usersCollection,
+	usersStore,
 } from '@/db-collections'
+import { useStoreQuery } from '@/hooks/useLiveQuery'
 import {
-    generateId,
-    getCurrentTimestamp,
-    getCurrentUserId,
+	generateId,
+	getCurrentTimestamp,
+	getCurrentUserId,
 } from '@/utils/gift-planner'
 
 export function CreateGroupDialog() {
-    const [open, setOpen] = useState(false)
-    const currentUserId = getCurrentUserId()
-    const users = useLiveQuery((q) =>
-        q.from({ user: usersCollection }).select(({ user }) => ({
-            ...user,
-        })),
-    )
+	const [open, setOpen] = useState(false)
+	const currentUserId = getCurrentUserId()
+	const users = useStoreQuery(usersStore, (items) => items)
 
     const form = useForm({
         defaultValues: {
@@ -100,10 +97,61 @@ export function CreateGroupDialog() {
                     </DialogDescription>
                 </DialogHeader>
                 <form
-                    onSubmit={(e) => {
+                    onSubmit={async (e) => {
                         e.preventDefault()
                         e.stopPropagation()
-                        form.handleSubmit()
+                        // Read values directly from input elements using their IDs
+                        const nameInput = document.getElementById(
+                            'name',
+                        ) as HTMLInputElement
+                        const descInput = document.getElementById(
+                            'description',
+                        ) as HTMLTextAreaElement
+                        const name = nameInput?.value || ''
+                        const description = descInput?.value || ''
+
+                        if (!name) return
+
+                        // Execute onSubmit logic directly
+                        const now = getCurrentTimestamp()
+
+                        // Ensure current user exists
+                        const existingUser = (
+                            users.data as User[] | undefined
+                        )?.find((u: User) => u.id === currentUserId)
+                        if (!existingUser) {
+                            usersCollection.insert({
+                                id: currentUserId,
+                                name: 'You',
+                                createdAt: now,
+                            })
+                        }
+
+                        // Create group
+                        const groupId = generateId()
+
+                        groupsCollection.insert({
+                            id: groupId,
+                            name,
+                            description: description || undefined,
+                            createdAt: now,
+                            createdBy: currentUserId,
+                        })
+
+                        // Add creator as member
+                        groupMembersCollection.insert({
+                            id: generateId(),
+                            groupId,
+                            userId: currentUserId,
+                            joinedAt: now,
+                        })
+
+                        toast.success('Group created successfully', {
+                            description: `"${name}" has been created.`,
+                        })
+
+                        setOpen(false)
+                        form.reset()
                     }}
                 >
                     <div className="grid gap-4 py-4">
@@ -111,7 +159,7 @@ export function CreateGroupDialog() {
                             name="name"
                             validators={{
                                 onChange: ({ value }) =>
-                                    !value
+                                    !value || value.trim() === ''
                                         ? 'Group name is required'
                                         : undefined,
                             }}
