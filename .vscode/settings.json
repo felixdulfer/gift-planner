@@ -31,5 +31,8 @@
   },
   "editor.codeActionsOnSave": {
     "source.organizeImports.biome": "explicit"
-  }
+  },
+  "git.autoRepositoryDetection": true,
+  "git.detectSubmodules": true,
+  "git.autoFetch": true
 }
