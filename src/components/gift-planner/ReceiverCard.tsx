@@ -1,5 +1,6 @@
-import { Gift, Pencil, Save, X } from 'lucide-react'
+import { Gift, Pencil, Save, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
     Card,
@@ -7,6 +8,15 @@ import {
     CardDescription,
     CardHeader,
 } from '@/components/ui/card'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import {
     type GiftAssignment,
@@ -16,6 +26,7 @@ import {
     type User,
     type Wishlist,
 } from '@/db-collections'
+import { useDeleteReceiver } from '@/hooks/use-api'
 import { CreateWishlistDialog } from './CreateWishlistDialog'
 import { WishlistCard } from './WishlistCard'
 
@@ -45,14 +56,44 @@ export function ReceiverCard({
         assignments.some((a) => a.giftId === gift.id && a.isPurchased),
     ).length
 
+    const deleteReceiver = useDeleteReceiver()
+
+    const handleDelete = async () => {
+        try {
+            // Optimistically update local state
+            receiversCollection.delete(receiver.id)
+            // Delete from API
+            await deleteReceiver.mutateAsync(receiver.id)
+            toast.success('Receiver deleted', {
+                description: `"${receiver.name}" has been deleted.`,
+            })
+        } catch (error) {
+            // Revert optimistic update on error
+            receiversCollection.insert(receiver)
+            toast.error('Failed to delete receiver', {
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : 'An error occurred while deleting the receiver.',
+            })
+        }
+    }
+
     return (
         <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
-                <div className="flex items-center gap-2">
-                    <Gift className="w-5 h-5" />
-                    <EditableReceiverName
-                        receiverId={receiver.id}
-                        name={receiver.name}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <Gift className="w-5 h-5 shrink-0" />
+                        <EditableReceiverName
+                            receiverId={receiver.id}
+                            name={receiver.name}
+                        />
+                    </div>
+                    <DeleteReceiverDialog
+                        receiver={receiver}
+                        onDelete={handleDelete}
+                        isDeleting={deleteReceiver.isPending}
                     />
                 </div>
                 <CardDescription>
@@ -190,5 +231,61 @@ function EditableReceiverName({
             </button>
             <Pencil className="w-4 h-4 opacity-0 group-hover:opacity-60 transition-opacity text-muted-foreground shrink-0" />
         </div>
+    )
+}
+
+function DeleteReceiverDialog({
+    receiver,
+    onDelete,
+    isDeleting,
+}: {
+    receiver: Receiver
+    onDelete: () => void
+    isDeleting: boolean
+}) {
+    const [open, setOpen] = useState(false)
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    title="Delete receiver"
+                >
+                    <Trash2 className="w-4 h-4" />
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Delete Receiver</DialogTitle>
+                    <DialogDescription>
+                        Are you sure you want to delete "{receiver.name}"? This
+                        action cannot be undone and will also delete all
+                        wishlists and gifts associated with this receiver.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                    <Button
+                        variant="outline"
+                        onClick={() => setOpen(false)}
+                        disabled={isDeleting}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="destructive"
+                        onClick={() => {
+                            onDelete()
+                            setOpen(false)
+                        }}
+                        disabled={isDeleting}
+                    >
+                        {isDeleting ? 'Deleting...' : 'Delete'}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     )
 }
