@@ -261,6 +261,13 @@ export const receiversCollection = {
             return { items: newItems }
         })
     },
+    delete: (id: string) => {
+        receiversStore.setState((state) => {
+            const newItems = new Map(state.items)
+            newItems.delete(id)
+            return { items: newItems }
+        })
+    },
     get: (id: string) => {
         return receiversStore.state.items.get(id)
     },
@@ -288,6 +295,13 @@ export const wishlistsCollection = {
             return { items: newItems }
         })
     },
+    delete: (id: string) => {
+        wishlistsStore.setState((state) => {
+            const newItems = new Map(state.items)
+            newItems.delete(id)
+            return { items: newItems }
+        })
+    },
     get: (id: string) => {
         return wishlistsStore.state.items.get(id)
     },
@@ -312,6 +326,13 @@ export const giftsCollection = {
             updater(draft)
             const newItems = new Map(state.items)
             newItems.set(id, draft)
+            return { items: newItems }
+        })
+    },
+    delete: (id: string) => {
+        giftsStore.setState((state) => {
+            const newItems = new Map(state.items)
+            newItems.delete(id)
             return { items: newItems }
         })
     },

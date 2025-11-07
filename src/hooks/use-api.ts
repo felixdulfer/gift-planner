@@ -302,7 +302,17 @@ export function useDeleteReceiver() {
     return useMutation({
         mutationFn: (id: string) => receiversApi.delete(id),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: queryKeys.receivers })
+            queryClient.invalidateQueries({
+                predicate: (query) => {
+                    const key = query.queryKey
+                    return (
+                        Array.isArray(key) &&
+                        key.length === 3 &&
+                        key[0] === 'events' &&
+                        key[2] === 'receivers'
+                    )
+                },
+            })
         },
     })
 }
@@ -365,7 +375,7 @@ export function useDeleteWishlist() {
     return useMutation({
         mutationFn: (id: string) => wishlistsApi.delete(id),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: queryKeys.wishlists })
+            queryClient.invalidateQueries({ queryKey: ['receivers'] })
         },
     })
 }
@@ -438,7 +448,17 @@ export function useDeleteGift() {
     return useMutation({
         mutationFn: (id: string) => giftsApi.delete(id),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: queryKeys.gifts })
+            queryClient.invalidateQueries({
+                predicate: (query) => {
+                    const key = query.queryKey
+                    return (
+                        Array.isArray(key) &&
+                        key.length === 3 &&
+                        key[0] === 'wishlists' &&
+                        key[2] === 'gifts'
+                    )
+                },
+            })
         },
     })
 }

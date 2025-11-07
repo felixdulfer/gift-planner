@@ -1,4 +1,4 @@
-import { CheckCircle2, ExternalLink, ShoppingCart, User } from 'lucide-react'
+import { CheckCircle2, ExternalLink, ShoppingCart, Trash2, User } from 'lucide-react'
 import { type ReactNode, useEffect, useId, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
@@ -27,6 +27,7 @@ import {
     giftsCollection,
     type User as UserType,
 } from '@/db-collections'
+import { useDeleteGift } from '@/hooks/use-api'
 import {
     generateId,
     getCurrentTimestamp,
@@ -52,6 +53,36 @@ export function GiftCard({
         assignment?.assignedToUserId === currentUserId && !isPurchased
     const isPurchasedByMe =
         assignment?.assignedToUserId === currentUserId && isPurchased
+
+    const deleteGift = useDeleteGift()
+
+    const handleDelete = async () => {
+        try {
+            // Optimistically update local state
+            giftsCollection.delete(gift.id)
+            // Also delete associated assignments
+            if (assignment) {
+                giftAssignmentsCollection.delete(assignment.id)
+            }
+            // Delete from API
+            await deleteGift.mutateAsync(gift.id)
+            toast.success('Gift deleted', {
+                description: `"${gift.name}" has been deleted.`,
+            })
+        } catch (error) {
+            // Revert optimistic update on error
+            giftsCollection.insert(gift)
+            if (assignment) {
+                giftAssignmentsCollection.insert(assignment)
+            }
+            toast.error('Failed to delete gift', {
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : 'An error occurred while deleting the gift.',
+            })
+        }
+    }
 
     const handleAssign = (userId: string | null) => {
         if (userId === null) {
@@ -180,7 +211,14 @@ export function GiftCard({
                             )}
                         </div>
                     </div>
-                    <EditGiftDialog gift={gift} />
+                    <div className="flex items-center gap-1">
+                        <DeleteGiftDialog
+                            gift={gift}
+                            onDelete={handleDelete}
+                            isDeleting={deleteGift.isPending}
+                        />
+                        <EditGiftDialog gift={gift} />
+                    </div>
                 </div>
                 <div className="flex items-center gap-2 mt-2">
                     {gift.link && (
@@ -316,6 +354,62 @@ function AssignGiftDialog({
                                 : 'Assign Gift'}
                         </Button>
                     </div>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
+function DeleteGiftDialog({
+    gift,
+    onDelete,
+    isDeleting,
+}: {
+    gift: GiftType
+    onDelete: () => void
+    isDeleting: boolean
+}) {
+    const [open, setOpen] = useState(false)
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    title="Delete gift"
+                >
+                    <Trash2 className="w-3 h-3" />
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Delete Gift</DialogTitle>
+                    <DialogDescription>
+                        Are you sure you want to delete "{gift.name}"? This
+                        action cannot be undone and will also remove any
+                        assignments for this gift.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                    <Button
+                        variant="outline"
+                        onClick={() => setOpen(false)}
+                        disabled={isDeleting}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="destructive"
+                        onClick={() => {
+                            onDelete()
+                            setOpen(false)
+                        }}
+                        disabled={isDeleting}
+                    >
+                        {isDeleting ? 'Deleting...' : 'Delete'}
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
