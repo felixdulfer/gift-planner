@@ -1,5 +1,6 @@
-import { Pencil, Save, X } from 'lucide-react'
+import { Pencil, Save, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
     Card,
@@ -7,6 +8,15 @@ import {
     CardDescription,
     CardHeader,
 } from '@/components/ui/card'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import {
     type GiftAssignment,
@@ -15,6 +25,7 @@ import {
     type Wishlist,
     wishlistsCollection,
 } from '@/db-collections'
+import { useDeleteWishlist } from '@/hooks/use-api'
 import { CreateGiftDialog } from './CreateGiftDialog'
 import { GiftCard } from './GiftCard'
 
@@ -36,6 +47,29 @@ export function WishlistCard({
         (a) => a.isPurchased,
     ).length
 
+    const deleteWishlist = useDeleteWishlist()
+
+    const handleDelete = async () => {
+        try {
+            // Optimistically update local state
+            wishlistsCollection.delete(wishlist.id)
+            // Delete from API
+            await deleteWishlist.mutateAsync(wishlist.id)
+            toast.success('Wishlist deleted', {
+                description: wishlist.name || 'Wishlist has been deleted.',
+            })
+        } catch (error) {
+            // Revert optimistic update on error
+            wishlistsCollection.insert(wishlist)
+            toast.error('Failed to delete wishlist', {
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : 'An error occurred while deleting the wishlist.',
+            })
+        }
+    }
+
     return (
         <Card className="border-2">
             <CardHeader className="pb-3">
@@ -44,7 +78,14 @@ export function WishlistCard({
                         wishlistId={wishlist.id}
                         name={wishlist.name}
                     />
-                    <CreateGiftDialog wishlistId={wishlist.id} />
+                    <div className="flex items-center gap-2">
+                        <DeleteWishlistDialog
+                            wishlist={wishlist}
+                            onDelete={handleDelete}
+                            isDeleting={deleteWishlist.isPending}
+                        />
+                        <CreateGiftDialog wishlistId={wishlist.id} />
+                    </div>
                 </div>
                 <CardDescription className="text-xs">
                     {gifts.length} {gifts.length === 1 ? 'gift' : 'gifts'}
@@ -182,5 +223,62 @@ function EditableWishlistName({
             </button>
             <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-60 transition-opacity text-muted-foreground shrink-0" />
         </div>
+    )
+}
+
+function DeleteWishlistDialog({
+    wishlist,
+    onDelete,
+    isDeleting,
+}: {
+    wishlist: Wishlist
+    onDelete: () => void
+    isDeleting: boolean
+}) {
+    const [open, setOpen] = useState(false)
+    const wishlistName = wishlist.name || 'this wishlist'
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    title="Delete wishlist"
+                >
+                    <Trash2 className="w-3 h-3" />
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Delete Wishlist</DialogTitle>
+                    <DialogDescription>
+                        Are you sure you want to delete "{wishlistName}"? This
+                        action cannot be undone and will also delete all gifts
+                        in this wishlist.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                    <Button
+                        variant="outline"
+                        onClick={() => setOpen(false)}
+                        disabled={isDeleting}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="destructive"
+                        onClick={() => {
+                            onDelete()
+                            setOpen(false)
+                        }}
+                        disabled={isDeleting}
+                    >
+                        {isDeleting ? 'Deleting...' : 'Delete'}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     )
 }
