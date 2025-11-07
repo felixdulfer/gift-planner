@@ -1,0 +1,74 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gift-planner-postgres
+    environment:
+      POSTGRES_USER: giftplanner
+      POSTGRES_PASSWORD: giftplanner
+      POSTGRES_DB: giftplanner
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U giftplanner"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gift-planner-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gift-planner-backend
+    environment:
+      DATABASE_URL: postgres://giftplanner:giftplanner@postgres:5432/giftplanner?sslmode=disable
+      PORT: 8080
+      ENVIRONMENT: development
+      WEBAUTHN_RP_ID: localhost
+      WEBAUTHN_RP_ORIGIN: http://localhost:3000
+      WEBAUTHN_RP_NAME: Gift Planner
+      JWT_SECRET: change-me-in-production-use-a-secure-random-string
+    ports:
+      - "3001:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - gift-planner-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: gift-planner-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - gift-planner-network
+    restart: unless-stopped
+
+  adminer:
+    image: adminer:latest
+    container_name: gift-planner-adminer
+    ports:
+      - "3002:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    depends_on:
+      - postgres
+    networks:
+      - gift-planner-network
+    restart: unless-stopped
+
+networks:
+  gift-planner-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
