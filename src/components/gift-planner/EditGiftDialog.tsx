@@ -14,10 +14,12 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { type Gift, giftsCollection } from '@/db-collections'
+import type { Gift } from '@/db-collections'
+import { useUpdateGift } from '@/hooks/use-api'
 
 export function EditGiftDialog({ gift }: { gift: Gift }) {
     const [open, setOpen] = useState(false)
+    const updateGift = useUpdateGift()
     const form = useForm({
         defaultValues: {
             name: gift.name,
@@ -25,17 +27,30 @@ export function EditGiftDialog({ gift }: { gift: Gift }) {
             link: gift.link || '',
         },
         onSubmit: async ({ value }) => {
-            giftsCollection.update(gift.id, (draft) => {
-                draft.name = value.name
-                draft.picture = value.picture || undefined
-                draft.link = value.link || undefined
-            })
+            try {
+                await updateGift.mutateAsync({
+                    id: gift.id,
+                    data: {
+                        name: value.name,
+                        picture: value.picture || undefined,
+                        link: value.link || undefined,
+                    },
+                })
 
-            toast.success('Gift updated successfully', {
-                description: `"${value.name}" has been updated.`,
-            })
+                toast.success('Gift updated successfully', {
+                    description: `"${value.name}" has been updated.`,
+                })
 
-            setOpen(false)
+                setOpen(false)
+            } catch (error) {
+                console.error('Failed to update gift:', error)
+                toast.error('Failed to update gift', {
+                    description:
+                        error instanceof Error
+                            ? error.message
+                            : 'An unexpected error occurred',
+                })
+            }
         },
     })
 

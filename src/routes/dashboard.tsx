@@ -1,7 +1,9 @@
+import { useQueries } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Calendar, CheckCircle2, ExternalLink } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { SiteHeader } from '@/components/SiteHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,27 +16,28 @@ import {
 } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { SidebarInset } from '@/components/ui/sidebar'
-import {
-    type Event,
-    eventsStore,
-    type GiftAssignment,
-    type Gift as GiftType,
-    type Group,
-    type GroupMember,
-    giftAssignmentsCollection,
-    giftAssignmentsStore,
-    giftsStore,
-    groupMembersStore,
-    groupsStore,
-    type Receiver,
-    receiversStore,
-    type Wishlist,
-    wishlistsStore,
+import type {
+    Event,
+    GiftAssignment,
+    Gift as GiftType,
+    Group,
+    GroupMember,
+    Receiver,
 } from '@/db-collections'
-import { useStoreQuery } from '@/hooks/useLiveQuery'
-import { getCurrentTimestamp, getCurrentUserId } from '@/utils/gift-planner'
-import { usePersistCollection } from '@/utils/persistence'
-import { ProtectedRoute } from '@/components/ProtectedRoute'
+import {
+    queryKeys,
+    useAllGroupMembers,
+    useGroups,
+    useUpdateGiftAssignment,
+} from '@/hooks/use-api'
+import {
+    eventsApi,
+    giftAssignmentsApi,
+    giftsApi,
+    receiversApi,
+    wishlistsApi,
+} from '@/lib/api'
+import { getCurrentUserId } from '@/utils/gift-planner'
 
 export const Route = createFileRoute('/dashboard')({
     component: DashboardPage,
@@ -55,74 +58,98 @@ function DashboardContent() {
         Set<string>
     >(new Set())
 
-    const groups = useStoreQuery(groupsStore, (items) => items)
-    const groupMembers = useStoreQuery(groupMembersStore, (items) => items)
-    const events = useStoreQuery(eventsStore, (items) => items)
-    const gifts = useStoreQuery(giftsStore, (items) => items)
-    const giftAssignments = useStoreQuery(
-        giftAssignmentsStore,
-        (items) => items,
-    )
-    const wishlists = useStoreQuery(wishlistsStore, (items) => items)
-    const receivers = useStoreQuery(receiversStore, (items) => items)
-
-    // Persist collections
-    usePersistCollection(
-        groupsStore,
-        'groups',
-        groups.data as Group[] | undefined,
-    )
-    usePersistCollection(
-        groupMembersStore,
-        'groupMembers',
-        groupMembers.data as GroupMember[] | undefined,
-    )
-    usePersistCollection(
-        eventsStore,
-        'events',
-        events.data as Event[] | undefined,
-    )
-    usePersistCollection(
-        giftsStore,
-        'gifts',
-        gifts.data as GiftType[] | undefined,
-    )
-    usePersistCollection(
-        giftAssignmentsStore,
-        'giftAssignments',
-        giftAssignments.data as GiftAssignment[] | undefined,
-    )
-    usePersistCollection(
-        wishlistsStore,
-        'wishlists',
-        wishlists.data as Wishlist[] | undefined,
-    )
-    usePersistCollection(
-        receiversStore,
-        'receivers',
-        receivers.data as Receiver[] | undefined,
-    )
+    const { data: groups = [] } = useGroups()
+    const { data: allGroupMembers = [] } = useAllGroupMembers()
 
     // Get groups the current user is a member of
-    const userGroups = (groups.data as Group[] | undefined)?.filter(
-        (group: Group) => {
-            return (groupMembers.data as GroupMember[] | undefined)?.some(
+    const userGroups = useMemo(() => {
+        return groups.filter((group: Group) => {
+            return allGroupMembers.some(
                 (member: GroupMember) =>
                     member.groupId === group.id &&
                     member.userId === currentUserId,
             )
-        },
+        })
+    }, [groups, allGroupMembers, currentUserId])
+
+    const userGroupIds = useMemo(
+        () => new Set(userGroups.map((g) => g.id)),
+        [userGroups],
     )
 
+    // Fetch events for all user groups using useQueries
+    const eventQueries = useQueries({
+        queries: userGroups.map((group) => ({
+            queryKey: queryKeys.events(group.id),
+            queryFn: () => eventsApi.getByGroup(group.id),
+        })),
+    })
+
+    // Aggregate all events from user's groups
+    const allEvents = useMemo(() => {
+        return eventQueries.flatMap((query) => query.data || [])
+    }, [eventQueries])
+
+    // Fetch receivers for all events
+    const receiverQueries = useQueries({
+        queries: allEvents.map((event) => ({
+            queryKey: queryKeys.receivers(event.id),
+            queryFn: () => receiversApi.getByEvent(event.id),
+        })),
+    })
+
+    // Aggregate all receivers
+    const allReceivers = useMemo(() => {
+        return receiverQueries.flatMap((query) => query.data || [])
+    }, [receiverQueries])
+
+    // Fetch wishlists for all receivers
+    const wishlistQueries = useQueries({
+        queries: allReceivers.map((receiver) => ({
+            queryKey: queryKeys.wishlists(receiver.id),
+            queryFn: () => wishlistsApi.getByReceiver(receiver.id),
+        })),
+    })
+
+    // Aggregate all wishlists
+    const allWishlists = useMemo(() => {
+        return wishlistQueries.flatMap((query) => query.data || [])
+    }, [wishlistQueries])
+
+    // Fetch gifts for all wishlists
+    const giftQueries = useQueries({
+        queries: allWishlists.map((wishlist) => ({
+            queryKey: queryKeys.gifts(wishlist.id),
+            queryFn: () => giftsApi.getByWishlist(wishlist.id),
+        })),
+    })
+
+    // Aggregate all gifts
+    const allGifts = useMemo(() => {
+        return giftQueries.flatMap((query) => query.data || [])
+    }, [giftQueries])
+
+    // Fetch assignments for all gifts
+    const assignmentQueries = useQueries({
+        queries: allGifts.map((gift) => ({
+            queryKey: queryKeys.giftAssignments(gift.id),
+            queryFn: () => giftAssignmentsApi.getByGift(gift.id),
+        })),
+    })
+
+    // Aggregate all gift assignments
+    const allGiftAssignments = useMemo(() => {
+        return assignmentQueries.flatMap((query) => query.data || [])
+    }, [assignmentQueries])
+
     // Get all events from user's groups
-    const userGroupIds = new Set(userGroups?.map((g) => g.id) ?? [])
-    const userEvents = (events.data as Event[] | undefined)?.filter(
-        (event: Event) => userGroupIds.has(event.groupId),
+    const userEvents = allEvents.filter((event: Event) =>
+        userGroupIds.has(event.groupId),
     )
 
     // Sort events by date (upcoming first)
     // Events without dates go to the end
-    const sortedEvents = [...(userEvents ?? [])].sort((a, b) => {
+    const sortedEvents = [...userEvents].sort((a, b) => {
         // If both have dates, sort by date (earliest first)
         if (a.date && b.date) {
             return a.date - b.date
@@ -139,44 +166,32 @@ function DashboardContent() {
         return 0
     })
 
-    // Create a map of groupId to group for quick lookup
-    const groupMap = new Map(
-        (userGroups ?? []).map((group) => [group.id, group]),
-    )
-
     // Get gifts assigned to current user (not purchased, or recently purchased)
-    const myAssignments =
-        (giftAssignments.data as GiftAssignment[] | undefined)?.filter(
-            (assignment) =>
-                assignment.assignedToUserId === currentUserId &&
-                (!assignment.isPurchased ||
-                    recentlyPurchasedGiftIds.has(assignment.giftId)),
-        ) ?? []
+    const myAssignments = allGiftAssignments.filter(
+        (assignment) =>
+            assignment.assignedToUserId === currentUserId &&
+            (!assignment.isPurchased ||
+                recentlyPurchasedGiftIds.has(assignment.giftId)),
+    )
 
     // Build gift context: gift -> wishlist -> receiver -> event -> group
     const assignedGiftsWithContext = myAssignments
         .map((assignment) => {
-            const gift = (gifts.data as GiftType[] | undefined)?.find(
-                (g) => g.id === assignment.giftId,
-            )
+            const gift = allGifts.find((g) => g.id === assignment.giftId)
             if (!gift) return null
 
-            const wishlist = (wishlists.data as Wishlist[] | undefined)?.find(
-                (w) => w.id === gift.wishlistId,
-            )
+            const wishlist = allWishlists.find((w) => w.id === gift.wishlistId)
             if (!wishlist) return null
 
-            const receiver = (receivers.data as Receiver[] | undefined)?.find(
+            const receiver = allReceivers.find(
                 (r) => r.id === wishlist.receiverId,
             )
             if (!receiver) return null
 
-            const event = (events.data as Event[] | undefined)?.find(
-                (e) => e.id === receiver.eventId,
-            )
+            const event = allEvents.find((e) => e.id === receiver.eventId)
             if (!event) return null
 
-            const group = groupMap.get(event.groupId)
+            const group = userGroups.find((g) => g.id === event.groupId)
             if (!group) return null
 
             return {
@@ -201,12 +216,7 @@ function DashboardContent() {
     })
 
     // Get qualified gifts that are not assigned and not purchased
-    const allGiftAssignments =
-        (giftAssignments.data as GiftAssignment[] | undefined) ?? []
-    const qualifiedGifts =
-        (gifts.data as GiftType[] | undefined)?.filter(
-            (gift) => gift.isQualified === true,
-        ) ?? []
+    const qualifiedGifts = allGifts.filter((gift) => gift.isQualified === true)
 
     const qualifiedGiftsWithContext = qualifiedGifts
         .map((gift) => {
@@ -224,22 +234,18 @@ function DashboardContent() {
                 return null // Skip assigned gifts (even if not purchased)
             }
 
-            const wishlist = (wishlists.data as Wishlist[] | undefined)?.find(
-                (w) => w.id === gift.wishlistId,
-            )
+            const wishlist = allWishlists.find((w) => w.id === gift.wishlistId)
             if (!wishlist) return null
 
-            const receiver = (receivers.data as Receiver[] | undefined)?.find(
+            const receiver = allReceivers.find(
                 (r) => r.id === wishlist.receiverId,
             )
             if (!receiver) return null
 
-            const event = (events.data as Event[] | undefined)?.find(
-                (e) => e.id === receiver.eventId,
-            )
+            const event = allEvents.find((e) => e.id === receiver.eventId)
             if (!event) return null
 
-            const group = groupMap.get(event.groupId)
+            const group = userGroups.find((g) => g.id === event.groupId)
             if (!group) return null
 
             return {
@@ -341,7 +347,9 @@ function DashboardContent() {
                         {sortedEvents && sortedEvents.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {sortedEvents.map((event: Event) => {
-                                    const group = groupMap.get(event.groupId)
+                                    const group = userGroups.find(
+                                        (g) => g.id === event.groupId,
+                                    )
                                     return (
                                         <EventCard
                                             key={event.id}
@@ -391,26 +399,53 @@ function AssignedGiftCard({
     const isPurchased = assignment.isPurchased
     const isPurchasedByMe =
         assignment.assignedToUserId === currentUserId && isPurchased
+    const updateGiftAssignment = useUpdateGiftAssignment()
 
-    const handleMarkPurchased = () => {
-        giftAssignmentsCollection.update(assignment.id, (draft) => {
-            draft.isPurchased = true
-            draft.purchasedAt = getCurrentTimestamp()
-        })
-        onMarkPurchased(gift.id)
-        toast.success('Gift marked as purchased', {
-            description: gift.name,
-        })
+    const handleMarkPurchased = async () => {
+        try {
+            await updateGiftAssignment.mutateAsync({
+                id: assignment.id,
+                data: {
+                    isPurchased: true,
+                    purchasedAt: Date.now(),
+                },
+            })
+            onMarkPurchased(gift.id)
+            toast.success('Gift marked as purchased', {
+                description: gift.name,
+            })
+        } catch (error) {
+            console.error('Failed to mark gift as purchased:', error)
+            toast.error('Failed to mark gift as purchased', {
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : 'An unexpected error occurred',
+            })
+        }
     }
 
-    const handleUnmarkPurchased = () => {
-        giftAssignmentsCollection.update(assignment.id, (draft) => {
-            draft.isPurchased = false
-            draft.purchasedAt = undefined
-        })
-        toast.success('Gift marked as not purchased', {
-            description: gift.name,
-        })
+    const handleUnmarkPurchased = async () => {
+        try {
+            await updateGiftAssignment.mutateAsync({
+                id: assignment.id,
+                data: {
+                    isPurchased: false,
+                    purchasedAt: undefined,
+                },
+            })
+            toast.success('Gift marked as not purchased', {
+                description: gift.name,
+            })
+        } catch (error) {
+            console.error('Failed to unmark gift as purchased:', error)
+            toast.error('Failed to unmark gift as purchased', {
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : 'An unexpected error occurred',
+            })
+        }
     }
 
     return (
@@ -473,11 +508,6 @@ function AssignedGiftCard({
                     <div className="text-sm text-muted-foreground">
                         {group.name}
                     </div>
-                    {gift.description && (
-                        <p className="text-sm text-muted-foreground mt-2">
-                            {gift.description}
-                        </p>
-                    )}
                 </div>
                 <div className="flex items-center gap-2 mt-4">
                     {gift.link && (
@@ -496,6 +526,7 @@ function AssignedGiftCard({
                             size="sm"
                             variant="outline"
                             onClick={handleMarkPurchased}
+                            disabled={updateGiftAssignment.isPending}
                             className="h-7 text-xs"
                         >
                             <CheckCircle2 className="w-3 h-3 mr-1" />

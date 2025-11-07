@@ -14,37 +14,37 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { receiversCollection } from '@/db-collections'
-import {
-    generateId,
-    getCurrentTimestamp,
-    getCurrentUserId,
-} from '@/utils/gift-planner'
+import { useCreateReceiver } from '@/hooks/use-api'
 
 export function CreateReceiverDialog({ eventId }: { eventId: string }) {
     const [open, setOpen] = useState(false)
+    const createReceiver = useCreateReceiver()
     const form = useForm({
         defaultValues: {
             name: '',
         },
         onSubmit: async ({ value }) => {
-            const currentUserId = getCurrentUserId()
-            const now = getCurrentTimestamp()
+            try {
+                await createReceiver.mutateAsync({
+                    eventId,
+                    data: { name: value.name },
+                })
 
-            receiversCollection.insert({
-                id: generateId(),
-                eventId,
-                name: value.name,
-                createdAt: now,
-                createdBy: currentUserId,
-            })
+                toast.success('Receiver added successfully', {
+                    description: `"${value.name}" has been added.`,
+                })
 
-            toast.success('Receiver added successfully', {
-                description: `"${value.name}" has been added.`,
-            })
-
-            setOpen(false)
-            form.reset()
+                setOpen(false)
+                form.reset()
+            } catch (error) {
+                console.error('Failed to create receiver:', error)
+                toast.error('Failed to add receiver', {
+                    description:
+                        error instanceof Error
+                            ? error.message
+                            : 'An unexpected error occurred',
+                })
+            }
         },
     })
 

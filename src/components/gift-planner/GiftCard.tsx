@@ -1,4 +1,10 @@
-import { CheckCircle2, ExternalLink, ShoppingCart, Trash2, User } from 'lucide-react'
+import {
+    CheckCircle2,
+    ExternalLink,
+    ShoppingCart,
+    Trash2,
+    User,
+} from 'lucide-react'
 import { type ReactNode, useEffect, useId, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
@@ -20,19 +26,19 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import {
-    type GiftAssignment,
-    type Gift as GiftType,
-    giftAssignmentsCollection,
-    giftsCollection,
-    type User as UserType,
+import type {
+    GiftAssignment,
+    Gift as GiftType,
+    User as UserType,
 } from '@/db-collections'
-import { useDeleteGift } from '@/hooks/use-api'
 import {
-    generateId,
-    getCurrentTimestamp,
-    getCurrentUserId,
-} from '@/utils/gift-planner'
+    useCreateGiftAssignment,
+    useDeleteGift,
+    useDeleteGiftAssignment,
+    useUpdateGift,
+    useUpdateGiftAssignment,
+} from '@/hooks/use-api'
+import { getCurrentUserId } from '@/utils/gift-planner'
 import { EditGiftDialog } from './EditGiftDialog'
 
 export function GiftCard({
@@ -55,87 +61,146 @@ export function GiftCard({
         assignment?.assignedToUserId === currentUserId && isPurchased
 
     const deleteGift = useDeleteGift()
+    const createGiftAssignment = useCreateGiftAssignment()
+    const updateGiftAssignment = useUpdateGiftAssignment()
+    const deleteGiftAssignment = useDeleteGiftAssignment()
+    const updateGift = useUpdateGift()
 
     const handleDelete = async () => {
         try {
-            // Optimistically update local state
-            giftsCollection.delete(gift.id)
-            // Also delete associated assignments
-            if (assignment) {
-                giftAssignmentsCollection.delete(assignment.id)
-            }
-            // Delete from API
             await deleteGift.mutateAsync(gift.id)
             toast.success('Gift deleted', {
                 description: `"${gift.name}" has been deleted.`,
             })
         } catch (error) {
-            // Revert optimistic update on error
-            giftsCollection.insert(gift)
-            if (assignment) {
-                giftAssignmentsCollection.insert(assignment)
-            }
             toast.error('Failed to delete gift', {
                 description:
                     error instanceof Error
                         ? error.message
                         : 'An error occurred while deleting the gift.',
             })
+            throw error
         }
     }
 
-    const handleAssign = (userId: string | null) => {
+    const handleAssign = async (userId: string | null) => {
         if (userId === null) {
             // Unassign
             if (assignment) {
-                giftAssignmentsCollection.delete(assignment.id)
+                try {
+                    await deleteGiftAssignment.mutateAsync(assignment.id)
+                } catch (error) {
+                    console.error('Failed to unassign gift:', error)
+                    toast.error('Failed to unassign gift', {
+                        description:
+                            error instanceof Error
+                                ? error.message
+                                : 'An unexpected error occurred',
+                    })
+                }
             }
         } else if (assignment) {
             // Update existing assignment
-            giftAssignmentsCollection.update(assignment.id, (draft) => {
-                draft.assignedToUserId = userId
-            })
+            try {
+                await updateGiftAssignment.mutateAsync({
+                    id: assignment.id,
+                    data: { assignedToUserId: userId },
+                })
+            } catch (error) {
+                console.error('Failed to update assignment:', error)
+                toast.error('Failed to update assignment', {
+                    description:
+                        error instanceof Error
+                            ? error.message
+                            : 'An unexpected error occurred',
+                })
+            }
         } else {
             // Create new assignment
-            giftAssignmentsCollection.insert({
-                id: generateId(),
-                giftId: gift.id,
-                assignedToUserId: userId,
-                assignedAt: getCurrentTimestamp(),
-                assignedBy: currentUserId,
-                isPurchased: false,
-            })
+            try {
+                await createGiftAssignment.mutateAsync({
+                    giftId: gift.id,
+                    assignedToUserId: userId,
+                })
+            } catch (error) {
+                console.error('Failed to assign gift:', error)
+                toast.error('Failed to assign gift', {
+                    description:
+                        error instanceof Error
+                            ? error.message
+                            : 'An unexpected error occurred',
+                })
+            }
         }
     }
 
-    const handleMarkPurchased = () => {
+    const handleMarkPurchased = async () => {
         if (assignment) {
-            giftAssignmentsCollection.update(assignment.id, (draft) => {
-                draft.isPurchased = true
-                draft.purchasedAt = getCurrentTimestamp()
-            })
-            toast.success('Gift marked as purchased', {
-                description: gift.name,
-            })
+            try {
+                await updateGiftAssignment.mutateAsync({
+                    id: assignment.id,
+                    data: {
+                        isPurchased: true,
+                        purchasedAt: Date.now(),
+                    },
+                })
+                toast.success('Gift marked as purchased', {
+                    description: gift.name,
+                })
+            } catch (error) {
+                console.error('Failed to mark gift as purchased:', error)
+                toast.error('Failed to mark gift as purchased', {
+                    description:
+                        error instanceof Error
+                            ? error.message
+                            : 'An unexpected error occurred',
+                })
+            }
         }
     }
 
-    const handleUnmarkPurchased = () => {
+    const handleUnmarkPurchased = async () => {
         if (assignment) {
-            giftAssignmentsCollection.update(assignment.id, (draft) => {
-                draft.isPurchased = false
-                draft.purchasedAt = undefined
-            })
-            toast.success('Gift marked as not purchased', {
-                description: gift.name,
-            })
+            try {
+                await updateGiftAssignment.mutateAsync({
+                    id: assignment.id,
+                    data: {
+                        isPurchased: false,
+                        purchasedAt: undefined,
+                    },
+                })
+                toast.success('Gift marked as not purchased', {
+                    description: gift.name,
+                })
+            } catch (error) {
+                console.error('Failed to unmark gift as purchased:', error)
+                toast.error('Failed to unmark gift as purchased', {
+                    description:
+                        error instanceof Error
+                            ? error.message
+                            : 'An unexpected error occurred',
+                })
+            }
         }
     }
 
-    const handleToggleQualified = (checked: boolean | 'indeterminate') => {
-        giftsCollection.update(gift.id, (draft) => {
-            draft.isQualified = checked === true
-        })
+    const handleToggleQualified = async (
+        checked: boolean | 'indeterminate',
+    ) => {
+        try {
+            await updateGift.mutateAsync({
+                id: gift.id,
+                data: { isQualified: checked === true },
+            })
+        } catch (error) {
+            console.error('Failed to update gift qualification:', error)
+            toast.error('Failed to update gift', {
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : 'An unexpected error occurred',
+            })
+        }
     }
 
     return (
@@ -366,10 +431,19 @@ function DeleteGiftDialog({
     isDeleting,
 }: {
     gift: GiftType
-    onDelete: () => void
+    onDelete: () => Promise<void>
     isDeleting: boolean
 }) {
     const [open, setOpen] = useState(false)
+
+    const handleDelete = async () => {
+        try {
+            await onDelete()
+            setOpen(false)
+        } catch (_error) {
+            // Error is handled in onDelete, keep dialog open so user can see the error
+        }
+    }
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -402,10 +476,7 @@ function DeleteGiftDialog({
                     </Button>
                     <Button
                         variant="destructive"
-                        onClick={() => {
-                            onDelete()
-                            setOpen(false)
-                        }}
+                        onClick={handleDelete}
                         disabled={isDeleting}
                     >
                         {isDeleting ? 'Deleting...' : 'Delete'}

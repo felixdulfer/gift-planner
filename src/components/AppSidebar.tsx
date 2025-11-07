@@ -1,6 +1,7 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useStore } from '@tanstack/react-store'
 import { Calendar, Gift, LayoutDashboard, LogOut } from 'lucide-react'
+import { useMemo } from 'react'
 import {
     Sidebar,
     SidebarContent,
@@ -15,17 +16,48 @@ import {
     SidebarMenuSubButton,
     SidebarMenuSubItem,
 } from '@/components/ui/sidebar'
-import {
-    type Event,
-    eventsStore,
-    type Group,
-    type GroupMember,
-    groupMembersStore,
-    groupsStore,
-} from '@/db-collections'
+import type { Event, Group, GroupMember } from '@/db-collections'
+import { useAllGroupMembers, useEvents, useGroups } from '@/hooks/use-api'
 import { useLogout } from '@/hooks/use-auth'
-import { useStoreQuery } from '@/hooks/useLiveQuery'
 import { authStore } from '@/lib/auth-store'
+
+// Component to fetch events for a specific group
+function GroupEvents({ groupId }: { groupId: string }) {
+    const { data: events = [] } = useEvents(groupId)
+    const router = useRouterState()
+    const currentPath = router.location.pathname
+
+    if (events.length === 0) return null
+
+    return (
+        <SidebarMenuSub>
+            {events.map((event: Event) => {
+                const isEventActive =
+                    currentPath === `/groups/${groupId}/events/${event.id}` ||
+                    currentPath.startsWith(
+                        `/groups/${groupId}/events/${event.id}/`,
+                    )
+
+                return (
+                    <SidebarMenuSubItem key={event.id}>
+                        <SidebarMenuSubButton asChild isActive={isEventActive}>
+                            <Link
+                                to="/groups/$groupId/events/$eventId"
+                                params={{
+                                    groupId,
+                                    eventId: event.id,
+                                }}
+                            >
+                                <Calendar />
+                                <span>{event.name}</span>
+                            </Link>
+                        </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                )
+            })}
+        </SidebarMenuSub>
+    )
+}
 
 const navigation = [
     {
@@ -47,27 +79,19 @@ export function AppSidebar() {
     const currentUserId = authState.user?.id || ''
     const { logout } = useLogout()
 
-    const groups = useStoreQuery(groupsStore, (items) => items)
-    const groupMembers = useStoreQuery(groupMembersStore, (items) => items)
-    const events = useStoreQuery(eventsStore, (items) => items)
+    const { data: groups = [] } = useGroups()
+    const { data: allGroupMembers = [] } = useAllGroupMembers()
 
     // Get groups the current user is a member of
-    const userGroups = (groups.data as Group[] | undefined)?.filter(
-        (group: Group) => {
-            return (groupMembers.data as GroupMember[] | undefined)?.some(
+    const userGroups = useMemo(() => {
+        return groups.filter((group: Group) => {
+            return allGroupMembers.some(
                 (member: GroupMember) =>
                     member.groupId === group.id &&
                     member.userId === currentUserId,
             )
-        },
-    )
-
-    // Get events for each group
-    const getGroupEvents = (groupId: string) => {
-        return (events.data as Event[] | undefined)?.filter(
-            (event: Event) => event.groupId === groupId,
-        )
-    }
+        })
+    }, [groups, allGroupMembers, currentUserId])
 
     return (
         <Sidebar>
@@ -108,8 +132,6 @@ export function AppSidebar() {
                         <SidebarGroupContent>
                             <SidebarMenu>
                                 {userGroups.map((group) => {
-                                    const groupEvents =
-                                        getGroupEvents(group.id) ?? []
                                     const isGroupActive =
                                         currentPath === `/groups/${group.id}` ||
                                         currentPath.startsWith(
@@ -133,52 +155,7 @@ export function AppSidebar() {
                                                     <span>{group.name}</span>
                                                 </Link>
                                             </SidebarMenuButton>
-                                            {groupEvents.length > 0 ? (
-                                                <SidebarMenuSub>
-                                                    {groupEvents.map(
-                                                        (event) => {
-                                                            const isEventActive =
-                                                                currentPath ===
-                                                                    `/groups/${group.id}/events/${event.id}` ||
-                                                                currentPath.startsWith(
-                                                                    `/groups/${group.id}/events/${event.id}/`,
-                                                                )
-
-                                                            return (
-                                                                <SidebarMenuSubItem
-                                                                    key={
-                                                                        event.id
-                                                                    }
-                                                                >
-                                                                    <SidebarMenuSubButton
-                                                                        asChild
-                                                                        isActive={
-                                                                            isEventActive
-                                                                        }
-                                                                    >
-                                                                        <Link
-                                                                            to="/groups/$groupId/events/$eventId"
-                                                                            params={{
-                                                                                groupId:
-                                                                                    group.id,
-                                                                                eventId:
-                                                                                    event.id,
-                                                                            }}
-                                                                        >
-                                                                            <Calendar />
-                                                                            <span>
-                                                                                {
-                                                                                    event.name
-                                                                                }
-                                                                            </span>
-                                                                        </Link>
-                                                                    </SidebarMenuSubButton>
-                                                                </SidebarMenuSubItem>
-                                                            )
-                                                        },
-                                                    )}
-                                                </SidebarMenuSub>
-                                            ) : null}
+                                            <GroupEvents groupId={group.id} />
                                         </SidebarMenuItem>
                                     )
                                 })}

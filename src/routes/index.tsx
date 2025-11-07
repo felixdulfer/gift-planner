@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { useStore } from '@tanstack/react-store'
 import { Calendar, Gift, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -7,7 +8,6 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card'
-import { useStore } from '@tanstack/react-store'
 import { authStore } from '@/lib/auth-store'
 
 export const Route = createFileRoute('/')({ component: App })

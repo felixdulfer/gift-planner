@@ -18,14 +18,13 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import {
-    type GiftAssignment,
-    type Gift as GiftType,
-    type User,
-    type Wishlist,
-    wishlistsCollection,
+import type {
+    GiftAssignment,
+    Gift as GiftType,
+    User,
+    Wishlist,
 } from '@/db-collections'
-import { useDeleteWishlist } from '@/hooks/use-api'
+import { useDeleteWishlist, useUpdateWishlist } from '@/hooks/use-api'
 import { CreateGiftDialog } from './CreateGiftDialog'
 import { GiftCard } from './GiftCard'
 
@@ -51,16 +50,11 @@ export function WishlistCard({
 
     const handleDelete = async () => {
         try {
-            // Optimistically update local state
-            wishlistsCollection.delete(wishlist.id)
-            // Delete from API
             await deleteWishlist.mutateAsync(wishlist.id)
             toast.success('Wishlist deleted', {
                 description: wishlist.name || 'Wishlist has been deleted.',
             })
         } catch (error) {
-            // Revert optimistic update on error
-            wishlistsCollection.insert(wishlist)
             toast.error('Failed to delete wishlist', {
                 description:
                     error instanceof Error
@@ -139,6 +133,7 @@ function EditableWishlistName({
     const [isEditing, setIsEditing] = useState(false)
     const [editedName, setEditedName] = useState(name || '')
     const inputRef = useRef<HTMLInputElement>(null)
+    const updateWishlist = useUpdateWishlist()
 
     useEffect(() => {
         if (isEditing && inputRef.current) {
@@ -151,12 +146,24 @@ function EditableWishlistName({
         setEditedName(name || '')
     }, [name])
 
-    const handleSave = () => {
+    const handleSave = async () => {
         const trimmedName = editedName.trim()
         if (trimmedName !== (name || '')) {
-            wishlistsCollection.update(wishlistId, (draft) => {
-                draft.name = trimmedName || undefined
-            })
+            try {
+                await updateWishlist.mutateAsync({
+                    id: wishlistId,
+                    data: { name: trimmedName || undefined },
+                })
+            } catch (error) {
+                console.error('Failed to update wishlist name:', error)
+                toast.error('Failed to update wishlist name', {
+                    description:
+                        error instanceof Error
+                            ? error.message
+                            : 'An unexpected error occurred',
+                })
+                setEditedName(name || '')
+            }
         } else {
             setEditedName(name || '')
         }

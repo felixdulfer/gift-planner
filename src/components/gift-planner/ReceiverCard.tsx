@@ -18,15 +18,14 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import {
-    type GiftAssignment,
-    type Gift as GiftType,
-    type Receiver,
-    receiversCollection,
-    type User,
-    type Wishlist,
+import type {
+    GiftAssignment,
+    Gift as GiftType,
+    Receiver,
+    User,
+    Wishlist,
 } from '@/db-collections'
-import { useDeleteReceiver } from '@/hooks/use-api'
+import { useDeleteReceiver, useUpdateReceiver } from '@/hooks/use-api'
 import { CreateWishlistDialog } from './CreateWishlistDialog'
 import { WishlistCard } from './WishlistCard'
 
@@ -60,16 +59,11 @@ export function ReceiverCard({
 
     const handleDelete = async () => {
         try {
-            // Optimistically update local state
-            receiversCollection.delete(receiver.id)
-            // Delete from API
             await deleteReceiver.mutateAsync(receiver.id)
             toast.success('Receiver deleted', {
                 description: `"${receiver.name}" has been deleted.`,
             })
         } catch (error) {
-            // Revert optimistic update on error
-            receiversCollection.insert(receiver)
             toast.error('Failed to delete receiver', {
                 description:
                     error instanceof Error
@@ -150,6 +144,7 @@ function EditableReceiverName({
     const [isEditing, setIsEditing] = useState(false)
     const [editedName, setEditedName] = useState(name)
     const inputRef = useRef<HTMLInputElement>(null)
+    const updateReceiver = useUpdateReceiver()
 
     useEffect(() => {
         if (isEditing && inputRef.current) {
@@ -162,12 +157,24 @@ function EditableReceiverName({
         setEditedName(name)
     }, [name])
 
-    const handleSave = () => {
+    const handleSave = async () => {
         const trimmedName = editedName.trim()
         if (trimmedName && trimmedName !== name) {
-            receiversCollection.update(receiverId, (draft) => {
-                draft.name = trimmedName
-            })
+            try {
+                await updateReceiver.mutateAsync({
+                    id: receiverId,
+                    data: { name: trimmedName },
+                })
+            } catch (error) {
+                console.error('Failed to update receiver name:', error)
+                toast.error('Failed to update receiver name', {
+                    description:
+                        error instanceof Error
+                            ? error.message
+                            : 'An unexpected error occurred',
+                })
+                setEditedName(name)
+            }
         } else {
             setEditedName(name)
         }

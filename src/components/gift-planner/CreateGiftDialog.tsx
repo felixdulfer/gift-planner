@@ -14,15 +14,11 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { giftsCollection } from '@/db-collections'
-import {
-    generateId,
-    getCurrentTimestamp,
-    getCurrentUserId,
-} from '@/utils/gift-planner'
+import { useCreateGift } from '@/hooks/use-api'
 
 export function CreateGiftDialog({ wishlistId }: { wishlistId: string }) {
     const [open, setOpen] = useState(false)
+    const createGift = useCreateGift()
     const form = useForm({
         defaultValues: {
             name: '',
@@ -30,26 +26,32 @@ export function CreateGiftDialog({ wishlistId }: { wishlistId: string }) {
             link: '',
         },
         onSubmit: async ({ value }) => {
-            const currentUserId = getCurrentUserId()
-            const now = getCurrentTimestamp()
+            try {
+                // Create gift in Firestore via API
+                await createGift.mutateAsync({
+                    wishlistId,
+                    data: {
+                        name: value.name,
+                        picture: value.picture || undefined,
+                        link: value.link || undefined,
+                        isQualified: false,
+                    },
+                })
 
-            giftsCollection.insert({
-                id: generateId(),
-                wishlistId,
-                name: value.name,
-                picture: value.picture || undefined,
-                link: value.link || undefined,
-                isQualified: false,
-                createdAt: now,
-                createdBy: currentUserId,
-            })
+                toast.success('Gift added successfully', {
+                    description: `"${value.name}" has been added to the wishlist.`,
+                })
 
-            toast.success('Gift added successfully', {
-                description: `"${value.name}" has been added to the wishlist.`,
-            })
-
-            setOpen(false)
-            form.reset()
+                setOpen(false)
+                form.reset()
+            } catch (error) {
+                toast.error('Failed to add gift', {
+                    description:
+                        error instanceof Error
+                            ? error.message
+                            : 'An error occurred while adding the gift.',
+                })
+            }
         },
     })
 

@@ -1,6 +1,16 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { ArrowLeft, Gift as GiftIcon, Pencil, Save, X } from 'lucide-react'
+import { useQueries } from '@tanstack/react-query'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import {
+    ArrowLeft,
+    Gift as GiftIcon,
+    Pencil,
+    Save,
+    Settings,
+    Trash2,
+    X,
+} from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { CreateReceiverDialog } from '@/components/gift-planner/CreateReceiverDialog'
 import { ReceiverCard } from '@/components/gift-planner/ReceiverCard'
 import { SiteHeader } from '@/components/SiteHeader'
@@ -11,84 +21,74 @@ import {
     CardDescription,
     CardTitle,
 } from '@/components/ui/card'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { SidebarInset } from '@/components/ui/sidebar'
+import { Textarea } from '@/components/ui/textarea'
+import type { Event, Receiver } from '@/db-collections'
 import {
-    type Event,
-    eventsCollection,
-    eventsStore,
-    type Gift,
-    type GiftAssignment,
-    giftAssignmentsStore,
-    giftsStore,
-    type Receiver,
-    receiversStore,
-    type User,
-    usersStore,
-    type Wishlist,
-    wishlistsStore,
-} from '@/db-collections'
-import { useStoreQuery } from '@/hooks/useLiveQuery'
-import { usePersistCollection } from '@/utils/persistence'
-import { ProtectedRoute } from '@/components/ProtectedRoute'
+    queryKeys,
+    useDeleteEvent,
+    useEvent,
+    useReceivers,
+    useUpdateEvent,
+    useUsers,
+} from '@/hooks/use-api'
+import { giftAssignmentsApi, giftsApi, wishlistsApi } from '@/lib/api'
 
 export const Route = createFileRoute('/groups/$groupId/events/$eventId/')({
     component: EventDetailPage,
 })
 
 function EventDetailPage() {
-    return (
-        <ProtectedRoute>
-            <EventDetailContent />
-        </ProtectedRoute>
-    )
-}
-
-function EventDetailContent() {
     const { groupId, eventId } = Route.useParams()
-    const event = useStoreQuery(
-        eventsStore,
-        (items) => (items as Event[]).filter((e) => e.id === eventId),
-        [eventId],
-    )
-    const receivers = useStoreQuery(
-        receiversStore,
-        (items) => (items as Receiver[]).filter((r) => r.eventId === eventId),
-        [eventId],
-    )
-    const wishlists = useStoreQuery(wishlistsStore, (items) => items)
-    const gifts = useStoreQuery(giftsStore, (items) => items)
-    const assignments = useStoreQuery(giftAssignmentsStore, (items) => items)
-    const users = useStoreQuery(usersStore, (items) => items)
+    const navigate = useNavigate()
+    const [editDialogOpen, setEditDialogOpen] = useState(false)
+    const { data: eventData } = useEvent(eventId)
+    const { data: receivers = [] } = useReceivers(eventId)
+    const { data: users = [] } = useUsers()
 
-    // Persist all collections
-    // Note: For events, we need to get all events, not just the single one
-    const allEvents = useStoreQuery(eventsStore, (items) => items)
-    usePersistCollection(
-        eventsStore,
-        'events',
-        allEvents.data as Event[] | undefined,
-    )
-    usePersistCollection(
-        receiversStore,
-        'receivers',
-        receivers.data as Receiver[] | undefined,
-    )
-    usePersistCollection(
-        wishlistsStore,
-        'wishlists',
-        wishlists.data as Wishlist[] | undefined,
-    )
-    usePersistCollection(giftsStore, 'gifts', gifts.data as Gift[] | undefined)
-    usePersistCollection(
-        giftAssignmentsStore,
-        'giftAssignments',
-        assignments.data as GiftAssignment[] | undefined,
-    )
-    usePersistCollection(usersStore, 'users', users.data as User[] | undefined)
+    // Fetch all wishlists for all receivers
+    const wishlistQueries = useQueries({
+        queries: receivers.map((receiver) => ({
+            queryKey: queryKeys.wishlists(receiver.id),
+            queryFn: () => wishlistsApi.getByReceiver(receiver.id),
+        })),
+    })
 
-    const eventData = (event.data as Event[] | undefined)?.[0]
+    const allWishlists = wishlistQueries.flatMap((query) => query.data || [])
+
+    // Fetch all gifts for all wishlists
+    const giftQueries = useQueries({
+        queries: allWishlists.map((wishlist) => ({
+            queryKey: queryKeys.gifts(wishlist.id),
+            queryFn: () => giftsApi.getByWishlist(wishlist.id),
+        })),
+    })
+
+    const allGifts = giftQueries.flatMap((query) => query.data || [])
+
+    // Fetch all assignments for all gifts
+    const assignmentQueries = useQueries({
+        queries: allGifts.map((gift) => ({
+            queryKey: queryKeys.giftAssignments(gift.id),
+            queryFn: () => giftAssignmentsApi.getByGift(gift.id),
+        })),
+    })
+
+    const allAssignments = assignmentQueries.flatMap(
+        (query) => query.data || [],
+    )
+
     if (!eventData) {
         return (
             <SidebarInset>
@@ -125,17 +125,44 @@ function EventDetailContent() {
                                         {eventData.description}
                                     </p>
                                 )}
-                                {eventData.date && (
-                                    <p className="text-muted-foreground mt-2">
-                                        {new Date(
-                                            eventData.date,
-                                        ).toLocaleDateString()}
-                                    </p>
-                                )}
+                                {eventData.date &&
+                                    (() => {
+                                        const date = new Date(eventData.date)
+                                        return !Number.isNaN(date.getTime()) ? (
+                                            <p className="text-muted-foreground mt-2">
+                                                {date.toLocaleDateString()}
+                                            </p>
+                                        ) : null
+                                    })()}
                             </div>
-                            <CreateReceiverDialog eventId={eventId} />
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setEditDialogOpen(true)}
+                                >
+                                    <Settings className="w-4 h-4" />
+                                </Button>
+                                <CreateReceiverDialog eventId={eventId} />
+                            </div>
                         </div>
                     </div>
+
+                    {eventData && (
+                        <EditEventDialog
+                            event={eventData}
+                            eventId={eventId}
+                            groupId={groupId}
+                            open={editDialogOpen}
+                            onOpenChange={setEditDialogOpen}
+                            onDelete={() =>
+                                navigate({
+                                    to: '/groups/$groupId',
+                                    params: { groupId },
+                                })
+                            }
+                        />
+                    )}
 
                     <Separator className="my-6" />
 
@@ -143,28 +170,19 @@ function EventDetailContent() {
                         <h2 className="text-2xl font-semibold mb-4">
                             Gift Receivers
                         </h2>
-                        {(receivers.data as Receiver[] | undefined) &&
-                        (receivers.data as Receiver[]).length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {(receivers.data as Receiver[]).map(
-                                    (receiver: Receiver) => (
-                                        <ReceiverCard
-                                            key={receiver.id}
-                                            receiver={receiver}
-                                            eventId={eventId}
-                                            wishlists={
-                                                (wishlists.data as Wishlist[]) ??
-                                                []
-                                            }
-                                            gifts={(gifts.data as Gift[]) ?? []}
-                                            assignments={
-                                                (assignments.data as GiftAssignment[]) ??
-                                                []
-                                            }
-                                            users={(users.data as User[]) ?? []}
-                                        />
-                                    ),
-                                )}
+                        {receivers && receivers.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                                {receivers.map((receiver: Receiver) => (
+                                    <ReceiverCard
+                                        key={receiver.id}
+                                        receiver={receiver}
+                                        eventId={eventId}
+                                        wishlists={allWishlists}
+                                        gifts={allGifts}
+                                        assignments={allAssignments}
+                                        users={users}
+                                    />
+                                ))}
                             </div>
                         ) : (
                             <Card className="text-center py-12">
@@ -188,6 +206,183 @@ function EventDetailContent() {
     )
 }
 
+function EditEventDialog({
+    event,
+    eventId,
+    open,
+    onOpenChange,
+    onDelete,
+}: {
+    event: Event
+    eventId: string
+    open: boolean
+    onOpenChange: (open: boolean) => void
+    onDelete: () => void
+}) {
+    const formatDateForInput = (timestamp?: number): string => {
+        if (!timestamp) return ''
+        const date = new Date(timestamp)
+        if (Number.isNaN(date.getTime())) return ''
+        return date.toISOString().split('T')[0]
+    }
+
+    const [name, setName] = useState(event.name)
+    const [description, setDescription] = useState(event.description || '')
+    const [date, setDate] = useState(formatDateForInput(event.date))
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+    const updateEvent = useUpdateEvent()
+    const deleteEvent = useDeleteEvent()
+
+    useEffect(() => {
+        setName(event.name)
+        setDescription(event.description || '')
+        setDate(formatDateForInput(event.date))
+    }, [event])
+
+    const handleSave = async () => {
+        try {
+            await updateEvent.mutateAsync({
+                id: eventId,
+                data: {
+                    name: name.trim(),
+                    description: description.trim() || undefined,
+                    date: date ? new Date(date).getTime() : undefined,
+                },
+            })
+            toast.success('Event updated successfully', {
+                description: `"${name}" has been updated.`,
+            })
+            onOpenChange(false)
+        } catch (error) {
+            console.error('Failed to update event:', error)
+            toast.error('Failed to update event', {
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : 'An unexpected error occurred',
+            })
+        }
+    }
+
+    const handleDelete = async () => {
+        try {
+            await deleteEvent.mutateAsync(eventId)
+            toast.success('Event deleted successfully', {
+                description: `"${event.name}" has been deleted.`,
+            })
+            setDeleteDialogOpen(false)
+            onOpenChange(false)
+            onDelete()
+        } catch (error) {
+            console.error('Failed to delete event:', error)
+            toast.error('Failed to delete event', {
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : 'An unexpected error occurred',
+            })
+        }
+    }
+
+    return (
+        <>
+            <Dialog open={open} onOpenChange={onOpenChange}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Edit Event</DialogTitle>
+                        <DialogDescription>
+                            Update the event details or delete the event
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="event-name">Name</Label>
+                            <Input
+                                id="event-name"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder="Event name"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="event-description">
+                                Description (optional)
+                            </Label>
+                            <Textarea
+                                id="event-description"
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                placeholder="Event description"
+                                rows={3}
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="event-date">Date (optional)</Label>
+                            <Input
+                                id="event-date"
+                                type="date"
+                                value={date}
+                                onChange={(e) => setDate(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter className="flex justify-between">
+                        <Button
+                            variant="destructive"
+                            onClick={() => setDeleteDialogOpen(true)}
+                        >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete Event
+                        </Button>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => onOpenChange(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleSave}
+                                disabled={updateEvent.isPending}
+                            >
+                                {updateEvent.isPending ? 'Saving...' : 'Save'}
+                            </Button>
+                        </div>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete Event</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete "{event.name}"? This
+                            action cannot be undone and will remove all
+                            associated receivers, wishlists, and gifts.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setDeleteDialogOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleDelete}
+                            disabled={deleteEvent.isPending}
+                        >
+                            {deleteEvent.isPending ? 'Deleting...' : 'Delete'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </>
+    )
+}
+
 function EditableEventName({
     eventId,
     name,
@@ -198,6 +393,7 @@ function EditableEventName({
     const [isEditing, setIsEditing] = useState(false)
     const [editedName, setEditedName] = useState(name)
     const inputRef = useRef<HTMLInputElement>(null)
+    const updateEvent = useUpdateEvent()
 
     useEffect(() => {
         if (isEditing && inputRef.current) {
@@ -210,12 +406,18 @@ function EditableEventName({
         setEditedName(name)
     }, [name])
 
-    const handleSave = () => {
+    const handleSave = async () => {
         const trimmedName = editedName.trim()
         if (trimmedName && trimmedName !== name) {
-            eventsCollection.update(eventId, (draft) => {
-                draft.name = trimmedName
-            })
+            try {
+                await updateEvent.mutateAsync({
+                    id: eventId,
+                    data: { name: trimmedName },
+                })
+            } catch (error) {
+                console.error('Failed to update event name:', error)
+                setEditedName(name)
+            }
         } else {
             setEditedName(name)
         }

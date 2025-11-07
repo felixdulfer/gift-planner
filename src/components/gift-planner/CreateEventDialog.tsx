@@ -15,15 +15,11 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { eventsCollection } from '@/db-collections'
-import {
-    generateId,
-    getCurrentTimestamp,
-    getCurrentUserId,
-} from '@/utils/gift-planner'
+import { useCreateEvent } from '@/hooks/use-api'
 
 export function CreateEventDialog({ groupId }: { groupId: string }) {
     const [open, setOpen] = useState(false)
+    const createEvent = useCreateEvent()
     const form = useForm({
         defaultValues: {
             name: '',
@@ -31,32 +27,40 @@ export function CreateEventDialog({ groupId }: { groupId: string }) {
             date: '',
         },
         onSubmit: async ({ value }) => {
-            const currentUserId = getCurrentUserId()
-            const now = getCurrentTimestamp()
+            try {
+                await createEvent.mutateAsync({
+                    groupId,
+                    data: {
+                        name: value.name,
+                        description: value.description || undefined,
+                        date: value.date
+                            ? new Date(value.date).getTime()
+                            : undefined,
+                    },
+                })
 
-            eventsCollection.insert({
-                id: generateId(),
-                groupId,
-                name: value.name,
-                description: value.description || undefined,
-                date: value.date ? new Date(value.date).getTime() : undefined,
-                createdAt: now,
-                createdBy: currentUserId,
-            })
+                toast.success('Event created successfully', {
+                    description: `"${value.name}" has been created.`,
+                })
 
-            toast.success('Event created successfully', {
-                description: `"${value.name}" has been created.`,
-            })
-
-            setOpen(false)
-            form.reset()
+                setOpen(false)
+                form.reset()
+            } catch (error) {
+                console.error('Failed to create event:', error)
+                toast.error('Failed to create event', {
+                    description:
+                        error instanceof Error
+                            ? error.message
+                            : 'An unexpected error occurred',
+                })
+            }
         },
     })
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button>
+                <Button size="sm">
                     <Plus className="w-4 h-4 mr-2" />
                     Create Event
                 </Button>

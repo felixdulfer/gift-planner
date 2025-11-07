@@ -14,12 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { wishlistsCollection } from '@/db-collections'
-import {
-    generateId,
-    getCurrentTimestamp,
-    getCurrentUserId,
-} from '@/utils/gift-planner'
+import { useCreateWishlist } from '@/hooks/use-api'
 
 export function CreateWishlistDialog({
     receiverId,
@@ -29,31 +24,38 @@ export function CreateWishlistDialog({
     eventId: string
 }) {
     const [open, setOpen] = useState(false)
+    const createWishlist = useCreateWishlist()
     const form = useForm({
         defaultValues: {
             name: '',
         },
         onSubmit: async ({ value }) => {
-            const currentUserId = getCurrentUserId()
-            const now = getCurrentTimestamp()
+            try {
+                await createWishlist.mutateAsync({
+                    receiverId,
+                    data: {
+                        eventId,
+                        name: value.name || undefined,
+                    },
+                })
 
-            wishlistsCollection.insert({
-                id: generateId(),
-                receiverId,
-                eventId,
-                name: value.name || undefined,
-                createdAt: now,
-                createdBy: currentUserId,
-            })
+                toast.success('Wishlist created successfully', {
+                    description: value.name
+                        ? `"${value.name}" wishlist has been created.`
+                        : 'Wishlist has been created.',
+                })
 
-            toast.success('Wishlist created successfully', {
-                description: value.name
-                    ? `"${value.name}" wishlist has been created.`
-                    : 'Wishlist has been created.',
-            })
-
-            setOpen(false)
-            form.reset()
+                setOpen(false)
+                form.reset()
+            } catch (error) {
+                console.error('Failed to create wishlist:', error)
+                toast.error('Failed to create wishlist', {
+                    description:
+                        error instanceof Error
+                            ? error.message
+                            : 'An unexpected error occurred',
+                })
+            }
         },
     })
 

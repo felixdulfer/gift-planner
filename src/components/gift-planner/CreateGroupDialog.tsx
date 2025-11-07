@@ -15,7 +15,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { groupMembersCollection, groupsCollection } from '@/db-collections'
 import {
     useAddGroupMember,
     useCreateGroup,
@@ -75,27 +74,10 @@ export function CreateGroupDialog() {
                     description: value.description || undefined,
                 })
 
-                // Update local store with the created group
-                groupsCollection.insert({
-                    id: createdGroup.id,
-                    name: createdGroup.name,
-                    description: createdGroup.description,
-                    createdAt: createdGroup.createdAt,
-                    createdBy: createdGroup.createdBy,
-                })
-
                 // Add creator as member in Firestore
-                const createdMember = await addGroupMember.mutateAsync({
+                await addGroupMember.mutateAsync({
                     groupId: createdGroup.id,
                     userId: currentUserId,
-                })
-
-                // Update local store with the created member
-                groupMembersCollection.insert({
-                    id: createdMember.id,
-                    groupId: createdMember.groupId,
-                    userId: createdMember.userId,
-                    joinedAt: createdMember.joinedAt,
                 })
 
                 toast.success('Group created successfully', {

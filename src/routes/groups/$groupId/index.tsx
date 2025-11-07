@@ -1,11 +1,27 @@
-import { createFileRoute, Link, Outlet } from '@tanstack/react-router'
-import { ArrowLeft, Calendar, Pencil, Save, Users, X } from 'lucide-react'
+import {
+    createFileRoute,
+    Link,
+    Outlet,
+    useNavigate,
+} from '@tanstack/react-router'
+import {
+    ArrowLeft,
+    Calendar,
+    Pencil,
+    Save,
+    Settings,
+    Trash2,
+    Users,
+    X,
+} from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { CreateEventDialog } from '@/components/gift-planner/CreateEventDialog'
 import {
     AddUserDialog,
     JoinGroupDialog,
 } from '@/components/gift-planner/UserManagement'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { SiteHeader } from '@/components/SiteHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -16,23 +32,28 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { SidebarInset } from '@/components/ui/sidebar'
+import { Textarea } from '@/components/ui/textarea'
+import type { Event, Group, GroupMember, User } from '@/db-collections'
 import {
-    type Event,
-    eventsStore,
-    type Group,
-    type GroupMember,
-    groupMembersStore,
-    groupsCollection,
-    groupsStore,
-    type User,
-    usersStore,
-} from '@/db-collections'
-import { useStoreQuery } from '@/hooks/useLiveQuery'
-import { usePersistCollection } from '@/utils/persistence'
-import { ProtectedRoute } from '@/components/ProtectedRoute'
+    useDeleteGroup,
+    useEvents,
+    useGroup,
+    useGroupMembers,
+    useUpdateGroup,
+    useUsers,
+} from '@/hooks/use-api'
 
 export const Route = createFileRoute('/groups/$groupId/')({
     component: GroupDetailPage,
@@ -48,45 +69,15 @@ function GroupDetailPage() {
 
 function GroupDetailContent() {
     const { groupId } = Route.useParams()
-    const group = useStoreQuery(
-        groupsStore,
-        (items) => items.filter((g) => g.id === groupId),
-        [groupId],
-    )
-    const events = useStoreQuery(
-        eventsStore,
-        (items) => items.filter((e) => e.groupId === groupId),
-        [groupId],
-    )
-    const groupMembers = useStoreQuery(
-        groupMembersStore,
-        (items) => items.filter((m) => m.groupId === groupId),
-        [groupId],
-    )
-    const users = useStoreQuery(usersStore, (items) => items)
+    const navigate = useNavigate()
+    const [editDialogOpen, setEditDialogOpen] = useState(false)
 
-    // Persist collections
-    // Get all groups for persistence (not just the single one)
-    const allGroups = useStoreQuery(groupsStore, (items) => items)
-    usePersistCollection(
-        eventsStore,
-        'events',
-        events.data as Event[] | undefined,
-    )
-    usePersistCollection(
-        groupMembersStore,
-        'groupMembers',
-        groupMembers.data as GroupMember[] | undefined,
-    )
-    usePersistCollection(usersStore, 'users', users.data as User[] | undefined)
-    usePersistCollection(
-        groupsStore,
-        'groups',
-        allGroups.data as Group[] | undefined,
-    )
+    const { data: group } = useGroup(groupId)
+    const { data: events = [] } = useEvents(groupId)
+    const { data: groupMembers = [] } = useGroupMembers(groupId)
+    const { data: users = [] } = useUsers()
 
-    const groupData = (group.data as Group[] | undefined)?.[0]
-    if (!groupData) {
+    if (!group) {
         return (
             <SidebarInset>
                 <SiteHeader />
@@ -99,13 +90,10 @@ function GroupDetailContent() {
         )
     }
 
-    const memberCount =
-        (groupMembers.data as GroupMember[] | undefined)?.length ?? 0
-    const memberNames = (groupMembers.data as GroupMember[] | undefined)
-        ?.map((member: GroupMember) => {
-            const user = (users.data as User[] | undefined)?.find(
-                (u: User) => u.id === member.userId,
-            )
+    const memberCount = groupMembers.length
+    const memberNames = groupMembers
+        .map((member: GroupMember) => {
+            const user = users.find((u: User) => u.id === member.userId)
             return user?.name ?? 'Unknown'
         })
         .slice(0, 5)
@@ -126,12 +114,24 @@ function GroupDetailContent() {
                             <div>
                                 <EditableGroupName
                                     groupId={groupId}
-                                    name={groupData.name}
+                                    name={group.name}
                                 />
-                                {groupData.description && (
-                                    <p className="text-muted-foreground mt-2">
-                                        {groupData.description}
-                                    </p>
+                                {group.description ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => setEditDialogOpen(true)}
+                                        className="text-muted-foreground mt-2 text-left hover:text-foreground transition-colors cursor-pointer"
+                                    >
+                                        {group.description}
+                                    </button>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => setEditDialogOpen(true)}
+                                        className="text-muted-foreground/50 mt-2 text-left hover:text-muted-foreground transition-colors cursor-pointer italic"
+                                    >
+                                        Click to add description
+                                    </button>
                                 )}
                                 <div className="flex items-center gap-4 mt-4">
                                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -160,27 +160,39 @@ function GroupDetailContent() {
                             <div className="flex gap-2">
                                 <AddUserDialog />
                                 <JoinGroupDialog groupId={groupId} />
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setEditDialogOpen(true)}
+                                >
+                                    <Settings className="w-4 h-4" />
+                                </Button>
                                 <CreateEventDialog groupId={groupId} />
                             </div>
                         </div>
                     </div>
 
+                    <EditGroupDialog
+                        group={group}
+                        groupId={groupId}
+                        open={editDialogOpen}
+                        onOpenChange={setEditDialogOpen}
+                        onDelete={() => navigate({ to: '/groups' })}
+                    />
+
                     <Separator className="my-6" />
 
                     <div>
                         <h2 className="text-2xl font-semibold mb-4">Events</h2>
-                        {(events.data as Event[] | undefined) &&
-                        (events.data as Event[]).length > 0 ? (
+                        {events && events.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {(events.data as Event[]).map(
-                                    (event: Event) => (
-                                        <EventCard
-                                            key={event.id}
-                                            event={event}
-                                            groupId={groupId}
-                                        />
-                                    ),
-                                )}
+                                {events.map((event: Event) => (
+                                    <EventCard
+                                        key={event.id}
+                                        event={event}
+                                        groupId={groupId}
+                                    />
+                                ))}
                             </div>
                         ) : (
                             <Card className="text-center py-12">
@@ -205,6 +217,164 @@ function GroupDetailContent() {
     )
 }
 
+function EditGroupDialog({
+    group,
+    groupId,
+    open,
+    onOpenChange,
+    onDelete,
+}: {
+    group: Group
+    groupId: string
+    open: boolean
+    onOpenChange: (open: boolean) => void
+    onDelete: () => void
+}) {
+    const [name, setName] = useState(group.name)
+    const [description, setDescription] = useState(group.description || '')
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+    const updateGroup = useUpdateGroup()
+    const deleteGroup = useDeleteGroup()
+
+    useEffect(() => {
+        setName(group.name)
+        setDescription(group.description || '')
+    }, [group])
+
+    const handleSave = async () => {
+        try {
+            await updateGroup.mutateAsync({
+                id: groupId,
+                data: {
+                    name: name.trim(),
+                    description: description.trim() || undefined,
+                },
+            })
+            toast.success('Group updated successfully', {
+                description: `"${name}" has been updated.`,
+            })
+            onOpenChange(false)
+        } catch (error) {
+            console.error('Failed to update group:', error)
+            toast.error('Failed to update group', {
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : 'An unexpected error occurred',
+            })
+        }
+    }
+
+    const handleDelete = async () => {
+        try {
+            await deleteGroup.mutateAsync(groupId)
+            toast.success('Group deleted successfully', {
+                description: `"${group.name}" has been deleted.`,
+            })
+            setDeleteDialogOpen(false)
+            onOpenChange(false)
+            onDelete()
+        } catch (error) {
+            console.error('Failed to delete group:', error)
+            toast.error('Failed to delete group', {
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : 'An unexpected error occurred',
+            })
+        }
+    }
+
+    return (
+        <>
+            <Dialog open={open} onOpenChange={onOpenChange}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Edit Group</DialogTitle>
+                        <DialogDescription>
+                            Update the group details or delete the group
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="group-name">Name</Label>
+                            <Input
+                                id="group-name"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder="Group name"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="group-description">
+                                Description (optional)
+                            </Label>
+                            <Textarea
+                                id="group-description"
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                placeholder="Group description"
+                                rows={3}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter className="flex justify-between">
+                        <Button
+                            variant="destructive"
+                            onClick={() => setDeleteDialogOpen(true)}
+                        >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete Group
+                        </Button>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => onOpenChange(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleSave}
+                                disabled={updateGroup.isPending}
+                            >
+                                {updateGroup.isPending ? 'Saving...' : 'Save'}
+                            </Button>
+                        </div>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete Group</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete "{group.name}"? This
+                            action cannot be undone and will remove all
+                            associated events, receivers, wishlists, and gifts.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setDeleteDialogOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleDelete}
+                            disabled={deleteGroup.isPending}
+                        >
+                            {deleteGroup.isPending ? 'Deleting...' : 'Delete'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </>
+    )
+}
+
 function EditableGroupName({
     groupId,
     name,
@@ -215,6 +385,7 @@ function EditableGroupName({
     const [isEditing, setIsEditing] = useState(false)
     const [editedName, setEditedName] = useState(name)
     const inputRef = useRef<HTMLInputElement>(null)
+    const updateGroup = useUpdateGroup()
 
     useEffect(() => {
         if (isEditing && inputRef.current) {
@@ -227,12 +398,20 @@ function EditableGroupName({
         setEditedName(name)
     }, [name])
 
-    const handleSave = () => {
+    const handleSave = async () => {
         const trimmedName = editedName.trim()
         if (trimmedName && trimmedName !== name) {
-            groupsCollection.update(groupId, (draft) => {
-                draft.name = trimmedName
-            })
+            try {
+                // Update in Firestore
+                await updateGroup.mutateAsync({
+                    id: groupId,
+                    data: { name: trimmedName },
+                })
+            } catch (error) {
+                console.error('Failed to update group name:', error)
+                // Revert on error
+                setEditedName(name)
+            }
         } else {
             setEditedName(name)
         }

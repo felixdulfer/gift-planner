@@ -10,13 +10,7 @@ import {
 } from '@/components/ui/breadcrumb'
 import { Separator } from '@/components/ui/separator'
 import { SidebarTrigger } from '@/components/ui/sidebar'
-import {
-    type Event,
-    eventsStore,
-    type Group,
-    groupsStore,
-} from '@/db-collections'
-import { useStoreQuery } from '@/hooks/useLiveQuery'
+import { useEvent, useGroup } from '@/hooks/use-api'
 import { ThemeToggle } from './ThemeToggle'
 
 export function SiteHeader() {
@@ -37,25 +31,8 @@ export function SiteHeader() {
             : null
 
     // Fetch group and event data
-    const group = useStoreQuery(
-        groupsStore,
-        (items) =>
-            groupId
-                ? (items as Group[]).filter((g: Group) => g.id === groupId)
-                : [],
-        [groupId],
-    )
-    const event = useStoreQuery(
-        eventsStore,
-        (items) =>
-            eventId
-                ? (items as Event[]).filter((e: Event) => e.id === eventId)
-                : [],
-        [eventId],
-    )
-
-    const groupData = (group.data as Group[] | undefined)?.[0]
-    const eventData = (event.data as Event[] | undefined)?.[0]
+    const { data: groupData } = useGroup(groupId || '')
+    const { data: eventData } = useEvent(eventId || '')
 
     // Build breadcrumbs from pathname
     // Filter out 'dashboard' from breadcrumbs since it's the base route

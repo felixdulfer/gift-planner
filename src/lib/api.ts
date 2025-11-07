@@ -552,8 +552,74 @@ export const giftsApi = {
     },
 
     delete: async (id: string): Promise<{ message: string }> => {
-        await deleteDoc(doc(db, 'gifts', id))
-        return { message: 'Gift deleted successfully' }
+        try {
+            await deleteDoc(doc(db, 'gifts', id))
+            return { message: 'Gift deleted successfully' }
+        } catch (error: unknown) {
+            // Extract more meaningful error messages from Firebase errors
+            if (error && typeof error === 'object' && 'code' in error) {
+                const firebaseError = error as {
+                    code: string
+                    message?: string
+                }
+                // Handle Firebase error codes
+                if (firebaseError.code === 'permission-denied') {
+                    throw new Error(
+                        'You do not have permission to delete this gift.',
+                    )
+                }
+                if (firebaseError.code === 'not-found') {
+                    throw new Error(
+                        'Gift not found. It may have already been deleted.',
+                    )
+                }
+                if (
+                    firebaseError.code === 'unavailable' ||
+                    firebaseError.code === 'deadline-exceeded'
+                ) {
+                    throw new Error(
+                        'Network error. Please check your connection and try again.',
+                    )
+                }
+                if (firebaseError.code === 'failed-precondition') {
+                    throw new Error('Unable to delete gift. It may be in use.')
+                }
+                // Use Firebase error message if available
+                throw new Error(
+                    firebaseError.message || 'Failed to delete gift.',
+                )
+            }
+            if (error instanceof Error) {
+                // Check error message for common patterns
+                const errorMessage = error.message.toLowerCase()
+                if (
+                    errorMessage.includes('permission') ||
+                    errorMessage.includes('permissions-denied')
+                ) {
+                    throw new Error(
+                        'You do not have permission to delete this gift.',
+                    )
+                }
+                if (errorMessage.includes('not-found')) {
+                    throw new Error(
+                        'Gift not found. It may have already been deleted.',
+                    )
+                }
+                if (
+                    errorMessage.includes('unavailable') ||
+                    errorMessage.includes('network')
+                ) {
+                    throw new Error(
+                        'Network error. Please check your connection and try again.',
+                    )
+                }
+                // Re-throw with original message if it's already meaningful
+                throw error
+            }
+            throw new Error(
+                'An unexpected error occurred while deleting the gift.',
+            )
+        }
     },
 }
 

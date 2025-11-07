@@ -21,39 +21,33 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
+import type { GroupMember, User } from '@/db-collections'
 import {
-    type GroupMember,
-    groupMembersCollection,
-    groupMembersStore,
-    type User,
-    usersCollection,
-    usersStore,
-} from '@/db-collections'
-import { useStoreQuery } from '@/hooks/useLiveQuery'
-import { generateId, getCurrentTimestamp } from '@/utils/gift-planner'
+    useAddGroupMember,
+    useCreateUser,
+    useGroupMembers,
+    useUsers,
+} from '@/hooks/use-api'
+import { generateId } from '@/utils/gift-planner'
 
 export function AddUserDialog() {
     const [open, setOpen] = useState(false)
+    const createUser = useCreateUser()
     const form = useForm({
         defaultValues: {
             name: '',
             email: '',
         },
         onSubmit: async ({ value }) => {
-            const now = getCurrentTimestamp()
-
             try {
-                const userData = {
+                await createUser.mutateAsync({
                     id: generateId(),
                     name: value.name.trim(),
                     email: value.email?.trim() || undefined,
-                    createdAt: now,
-                }
-
-                usersCollection.insert(userData)
+                })
 
                 toast.success('User added successfully', {
-                    description: `"${userData.name}" has been added.`,
+                    description: `"${value.name.trim()}" has been added.`,
                 })
 
                 setOpen(false)
@@ -71,7 +65,7 @@ export function AddUserDialog() {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline">
+                <Button variant="outline" size="sm">
                     <UserPlus className="w-4 h-4 mr-2" />
                     Add User
                 </Button>
@@ -175,32 +169,26 @@ export function AddUserDialog() {
 
 export function JoinGroupDialog({ groupId }: { groupId: string }) {
     const [open, setOpen] = useState(false)
-    const users = useStoreQuery(usersStore, (items) => items)
-    const groupMembers = useStoreQuery(
-        groupMembersStore,
-        (items) => items.filter((m) => m.groupId === groupId),
-        [groupId],
-    )
+    const { data: users = [] } = useUsers()
+    const { data: groupMembers = [] } = useGroupMembers(groupId)
+    const addGroupMember = useAddGroupMember()
     const [selectedUserId, setSelectedUserId] = useState<string>('')
 
-    const handleJoin = () => {
+    const handleJoin = async () => {
         if (!selectedUserId) return
 
-        const now = getCurrentTimestamp()
-        const existingMember = (
-            groupMembers.data as GroupMember[] | undefined
-        )?.find((m: GroupMember) => m.userId === selectedUserId)
+        const existingMember = groupMembers.find(
+            (m: GroupMember) => m.userId === selectedUserId,
+        )
 
         if (!existingMember) {
             try {
-                const selectedUser = (users.data as User[] | undefined)?.find(
+                const selectedUser = users.find(
                     (u: User) => u.id === selectedUserId,
                 )
-                groupMembersCollection.insert({
-                    id: generateId(),
+                await addGroupMember.mutateAsync({
                     groupId,
                     userId: selectedUserId,
-                    joinedAt: now,
                 })
                 toast.success('User added to group', {
                     description: `"${selectedUser?.name || 'User'}" has been added to the group.`,
@@ -222,18 +210,16 @@ export function JoinGroupDialog({ groupId }: { groupId: string }) {
     }
 
     // Filter out users who are already members
-    const availableUsers = (users.data as User[] | undefined)?.filter(
-        (user: User) => {
-            return !(groupMembers.data as GroupMember[] | undefined)?.some(
-                (member: GroupMember) => member.userId === user.id,
-            )
-        },
-    )
+    const availableUsers = users.filter((user: User) => {
+        return !groupMembers.some(
+            (member: GroupMember) => member.userId === user.id,
+        )
+    })
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline">
+                <Button variant="outline" size="sm">
                     <Users className="w-4 h-4 mr-2" />
                     Add User to Group
                 </Button>
@@ -272,15 +258,11 @@ export function JoinGroupDialog({ groupId }: { groupId: string }) {
                     ) : (
                         <div className="text-center py-4">
                             <p className="text-sm text-muted-foreground mb-4">
-                                {(users.data as User[] | undefined) &&
-                                (users.data as User[]).length === 0
+                                {users.length === 0
                                     ? 'No users exist yet. Create a user first.'
                                     : 'All users are already members of this group.'}
                             </p>
-                            {(users.data as User[] | undefined) &&
-                                (users.data as User[]).length === 0 && (
-                                    <AddUserDialog />
-                                )}
+                            {users.length === 0 && <AddUserDialog />}
                         </div>
                     )}
                 </div>
@@ -290,10 +272,13 @@ export function JoinGroupDialog({ groupId }: { groupId: string }) {
                         disabled={
                             !selectedUserId ||
                             !availableUsers ||
-                            availableUsers.length === 0
+                            availableUsers.length === 0 ||
+                            addGroupMember.isPending
                         }
                     >
-                        Add to Group
+                        {addGroupMember.isPending
+                            ? 'Adding...'
+                            : 'Add to Group'}
                     </Button>
                 </DialogFooter>
             </DialogContent>

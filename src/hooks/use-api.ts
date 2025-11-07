@@ -1,6 +1,7 @@
 // API integration utilities and hooks
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { GroupMember } from '../db-collections/gift-planner'
 import {
     eventsApi,
     giftAssignmentsApi,
@@ -143,6 +144,22 @@ export function useGroupMembers(groupId: string) {
         queryKey: queryKeys.groupMembers(groupId),
         queryFn: () => groupMembersApi.getByGroup(groupId),
         enabled: !!groupId,
+    })
+}
+
+export function useAllGroupMembers() {
+    return useQuery({
+        queryKey: ['groupMembers', 'all'],
+        queryFn: async () => {
+            // Get all groups first, then get members for each
+            const groups = await groupsApi.getAll()
+            const allMembers: GroupMember[] = []
+            for (const group of groups) {
+                const members = await groupMembersApi.getByGroup(group.id)
+                allMembers.push(...members)
+            }
+            return allMembers
+        },
     })
 }
 
