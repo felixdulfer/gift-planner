@@ -11,12 +11,6 @@ import {
     usersApi,
     wishlistsApi,
 } from '../lib/api'
-import { apiClient } from '../lib/api-client'
-
-// Set auth token helper
-export function setAuthToken(token: string | null) {
-    apiClient.setAuthToken(token)
-}
 
 // Query keys factory
 export const queryKeys = {
@@ -51,6 +45,20 @@ export function useUser(id: string) {
         queryKey: queryKeys.user(id),
         queryFn: () => usersApi.getById(id),
         enabled: !!id,
+    })
+}
+
+export function useCreateUser() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: (data: { id: string; name: string; email?: string }) =>
+            usersApi.create(data),
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({
+                queryKey: queryKeys.user(variables.id),
+            })
+            queryClient.invalidateQueries({ queryKey: queryKeys.users })
+        },
     })
 }
 

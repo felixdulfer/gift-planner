@@ -1,117 +1,123 @@
-// Auth hooks for Supabase authentication
+// Auth hooks for Firebase authentication
 
 import { useMutation } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
+import {
+	createUserWithEmailAndPassword,
+	signInWithEmailAndPassword,
+	signOut,
+	updateProfile,
+	type User as FirebaseUser,
+} from 'firebase/auth'
+import { doc, setDoc, getDoc, Timestamp } from 'firebase/firestore'
 import { toast } from 'sonner'
 import { authActions } from '@/lib/auth-store'
-import { supabase } from '@/lib/supabase'
+import { auth, db } from '@/lib/firebase'
 
 export function useRegister() {
-    const router = useRouter()
+	const router = useRouter()
 
-    return useMutation({
-        mutationFn: async (data: {
-            name: string
-            email: string
-            password: string
-        }) => {
-            // Sign up with Supabase
-            const { data: authData, error } = await supabase.auth.signUp({
-                email: data.email.trim(),
-                password: data.password,
-                options: {
-                    data: {
-                        name: data.name.trim(),
-                    },
-                },
-            })
+	return useMutation({
+		mutationFn: async (data: {
+			name: string
+			email: string
+			password: string
+		}) => {
+			// Create user with Firebase Auth
+			const userCredential = await createUserWithEmailAndPassword(
+				auth,
+				data.email.trim(),
+				data.password,
+			)
 
-            if (error) {
-                throw new Error(error.message)
-            }
+			const user = userCredential.user
 
-            if (!authData.user) {
-                throw new Error('Failed to create user account')
-            }
+			// Update display name
+			await updateProfile(user, {
+				displayName: data.name.trim(),
+			})
 
-            // Update auth store
-            authActions.login(
-                authData.user.id,
-                authData.user.user_metadata?.name || data.name.trim(),
-                authData.user.email || data.email.trim(),
-            )
+			// Create user document in Firestore
+			await setDoc(doc(db, 'users', user.uid), {
+				id: user.uid,
+				name: data.name.trim(),
+				email: data.email.trim(),
+				createdAt: Timestamp.now(),
+				updatedAt: Timestamp.now(),
+			})
 
-            return authData.user
-        },
-        onSuccess: () => {
-            router.navigate({
-                to: '/dashboard',
-            })
-        },
-        onError: (error) => {
-            console.error('Error registering user:', error)
-            toast.error('Failed to register user', {
-                description:
-                    error instanceof Error ? error.message : String(error),
-            })
-        },
-    })
+			// Update auth store
+			authActions.login(
+				user.uid,
+				data.name.trim(),
+				data.email.trim(),
+			)
+
+			return user
+		},
+		onSuccess: () => {
+			router.navigate({
+				to: '/dashboard',
+			})
+		},
+		onError: (error) => {
+			console.error('Error registering user:', error)
+			toast.error('Failed to register user', {
+				description:
+					error instanceof Error ? error.message : String(error),
+			})
+		},
+	})
 }
 
 export function useLogin() {
-    const router = useRouter()
+	const router = useRouter()
 
-    return useMutation({
-        mutationFn: async (data: { email: string; password: string }) => {
-            // Sign in with Supabase
-            const { data: authData, error } =
-                await supabase.auth.signInWithPassword({
-                    email: data.email.trim(),
-                    password: data.password,
-                })
+	return useMutation({
+		mutationFn: async (data: { email: string; password: string }) => {
+			// Sign in with Firebase Auth
+			const userCredential = await signInWithEmailAndPassword(
+				auth,
+				data.email.trim(),
+				data.password,
+			)
 
-            if (error) {
-                throw new Error(error.message)
-            }
+			const user = userCredential.user
 
-            if (!authData.user) {
-                throw new Error('Failed to sign in')
-            }
+			// Update auth store
+			authActions.login(
+				user.uid,
+				user.displayName || user.email || '',
+				user.email || '',
+			)
 
-            // Update auth store
-            authActions.login(
-                authData.user.id,
-                authData.user.user_metadata?.name || authData.user.email || '',
-                authData.user.email || '',
-            )
-
-            return authData.user
-        },
-        onSuccess: () => {
-            router.navigate({
-                to: '/dashboard',
-            })
-        },
-        onError: (error) => {
-            console.error('Error logging in:', error)
-            toast.error('Failed to log in', {
-                description:
-                    error instanceof Error ? error.message : String(error),
-            })
-        },
-    })
+			return user
+		},
+		onSuccess: () => {
+			router.navigate({
+				to: '/dashboard',
+			})
+		},
+		onError: (error) => {
+			console.error('Error logging in:', error)
+			toast.error('Failed to log in', {
+				description:
+					error instanceof Error ? error.message : String(error),
+			})
+		},
+	})
 }
 
 export function useLogout() {
-    const router = useRouter()
+	const router = useRouter()
 
-    return {
-        logout: async () => {
-            await supabase.auth.signOut()
-            authActions.logout()
-            router.navigate({
-                to: '/',
-            })
-        },
-    }
+	return {
+		logout: async () => {
+			await signOut(auth)
+			authActions.logout()
+			router.navigate({
+				to: '/',
+			})
+		},
+	}
 }

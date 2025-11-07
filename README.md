@@ -38,11 +38,13 @@ This application is configured for deployment to GitHub Pages. The deployment is
 ### Configuration
 
 The app is configured with:
+
 - Base path: `/gift-planner/` (for GitHub Pages)
 - Build output: `dist/client` directory
 - Automatic base path detection via environment variables
 
 If you need to change the repository name, update the base path in:
+
 - `vite.config.ts` - Update the `base` config
 - `.github/workflows/deploy.yml` - The workflow will automatically use the correct base path
 
@@ -83,17 +85,70 @@ Am example chat application built with TanStack Start, TanStack Store, and Claud
 ## .env Updates
 
 ```env
-# Supabase Configuration
-# Get these values from: https://supabase.com/dashboard → Your Project → Settings → API
-VITE_SUPABASE_URL=https://your-project-id.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=your_publishable_key_here
-
-# API Configuration (if using backend)
-VITE_API_URL=http://localhost:8080/api
+# Firebase Configuration
+# Get these from Firebase Console: Project Settings → General → Your apps
+VITE_FIREBASE_API_KEY=your_api_key_here
+VITE_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
 
 # Anthropic API (if using AI features)
 ANTHROPIC_API_KEY=your_anthropic_api_key
 ```
+
+## Firebase Setup
+
+This application uses Firebase for authentication and Firestore for data storage. To set up Firebase:
+
+1. **Create a Firebase Project** (if you haven't already):
+   - Go to [Firebase Console](https://console.firebase.google.com) and create a new project
+   - Wait for the project to finish initializing
+
+2. **Enable Authentication**:
+   - Go to Authentication → Sign-in method
+   - Enable "Email/Password" provider
+   - Save the changes
+
+3. **Create Firestore Database**:
+   - Go to Firestore Database → Create database
+   - Start in test mode (you'll configure security rules later)
+   - Choose a location for your database
+
+4. **Get Configuration**:
+   - Go to Project Settings → General
+   - Scroll to "Your apps" section
+   - Click "Add app" → Web (</> icon)
+   - Register your app and copy the configuration values
+   - Add them to your `.env` file
+
+5. **Configure Firestore Security Rules**:
+   - Go to Firestore Database → Rules
+   - Set up rules to allow authenticated users to read/write their own data
+   - Example basic rules:
+   ```javascript
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       // Users can read/write their own user document
+       match /users/{userId} {
+         allow read, write: if request.auth != null && request.auth.uid == userId;
+       }
+       // Add more rules for other collections as needed
+     }
+   }
+   ```
+
+The application uses the following Firestore collections:
+- `users` - User profiles
+- `groups` - Gift groups
+- `groupMembers` - Group membership
+- `events` - Events within groups
+- `receivers` - Gift receivers
+- `wishlists` - Wishlists for receivers
+- `gifts` - Individual gifts
+- `giftAssignments` - Gift assignments to users
 
 ## ✨ Features
 
@@ -164,8 +219,8 @@ In the File Based Routing setup the layout is located in `src/routes/__root.tsx`
 Here is an example layout that includes a header:
 
 ```tsx
-import { Outlet, createRootRoute } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { Outlet, createRootRoute } from "@tanstack/react-router";
+import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
 import { Link } from "@tanstack/react-router";
 
@@ -182,7 +237,7 @@ export const Route = createRootRoute({
       <TanStackRouterDevtools />
     </>
   ),
-})
+});
 ```
 
 The `<TanStackRouterDevtools />` component is not required so you can remove it if you don't want it in your layout.

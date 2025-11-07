@@ -1,8 +1,8 @@
-// Auth store for managing authentication state with Supabase
+// Auth store for managing authentication state with Firebase
 
 import { Store } from '@tanstack/store'
-import { supabase } from './supabase'
-import { apiClient } from './api-client'
+import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth'
+import { auth } from './firebase'
 
 export interface AuthState {
 	user: { id: string; name: string; email: string } | null
@@ -16,36 +16,20 @@ const initialState: AuthState = {
 	isLoading: true,
 }
 
-// Load auth state from Supabase session
+// Load auth state from Firebase session
 async function loadAuthState(): Promise<AuthState> {
 	if (typeof window === 'undefined') {
 		return initialState
 	}
 
 	try {
-		const {
-			data: { session },
-		} = await supabase.auth.getSession()
-
-		if (session?.user) {
-			// Set auth token in API client
-			apiClient.setAuthToken(session.access_token)
-
-			return {
-				user: {
-					id: session.user.id,
-					name: session.user.user_metadata?.name || session.user.email || '',
-					email: session.user.email || '',
-				},
-				isAuthenticated: true,
-				isLoading: false,
-			}
-		}
+		// Firebase auth state is managed by onAuthStateChanged
+		// This will be set by the listener below
+		return { ...initialState, isLoading: true }
 	} catch (error) {
 		console.error('Error loading auth state:', error)
+		return { ...initialState, isLoading: false }
 	}
-
-	return { ...initialState, isLoading: false }
 }
 
 // Initialize store with loading state, then load actual state
@@ -60,20 +44,18 @@ if (typeof window !== 'undefined') {
 
 // Listen for auth state changes
 if (typeof window !== 'undefined') {
-	supabase.auth.onAuthStateChange((_event, session) => {
-		if (session?.user) {
-			apiClient.setAuthToken(session.access_token)
+	onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
+		if (firebaseUser) {
 			authStore.setState({
 				user: {
-					id: session.user.id,
-					name: session.user.user_metadata?.name || session.user.email || '',
-					email: session.user.email || '',
+					id: firebaseUser.uid,
+					name: firebaseUser.displayName || firebaseUser.email || '',
+					email: firebaseUser.email || '',
 				},
 				isAuthenticated: true,
 				isLoading: false,
 			})
 		} else {
-			apiClient.setAuthToken(null)
 			authStore.setState({
 				user: null,
 				isAuthenticated: false,
@@ -86,13 +68,6 @@ if (typeof window !== 'undefined') {
 // Auth actions
 export const authActions = {
 	login: (userId: string, userName: string, userEmail: string) => {
-		// Get the current session to get the access token
-		supabase.auth.getSession().then(({ data: { session } }) => {
-			if (session) {
-				apiClient.setAuthToken(session.access_token)
-			}
-		})
-
 		// Update store
 		authStore.setState({
 			user: {
@@ -106,9 +81,6 @@ export const authActions = {
 	},
 
 	logout: () => {
-		// Clear auth token in API client
-		apiClient.setAuthToken(null)
-
 		// Update store
 		authStore.setState({
 			user: null,
@@ -121,4 +93,3 @@ export const authActions = {
 		authStore.setState((state) => ({ ...state, isLoading }))
 	},
 }
-

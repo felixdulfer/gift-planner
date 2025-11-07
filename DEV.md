@@ -1,58 +1,71 @@
 # Development Mode
 
-Run the development stack with hot reload:
+Run the development server:
 
 ```bash
-docker compose -f docker-compose.dev.yml up
+bun run dev
 ```
 
 This will:
-- Mount source code as volumes for live changes
-- Use Air for Go backend hot reload
-- Use Vite dev server for frontend hot reload
-- Keep the same database and Adminer setup
+- Start the Vite dev server with hot module replacement (HMR)
+- Connect to your Firebase project for backend services
+- Enable live reloading of source code changes
 
-## Differences from Production
+## Prerequisites
 
-- **Backend**: Uses `Dockerfile.dev` with Air for hot reload
-- **Frontend**: Uses `Dockerfile.dev` with `bun run dev` instead of build
-- **Volumes**: Source code is mounted for live editing
-- **Ports**: Frontend runs on 3000 (Vite dev server) instead of 80
+1. **Firebase Project**: Create a project at https://console.firebase.google.com
+2. **Environment Variables**: Set up your `.env` file with Firebase credentials:
+   ```env
+   VITE_FIREBASE_API_KEY=your_api_key_here
+   VITE_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
+   VITE_FIREBASE_PROJECT_ID=your-project-id
+   VITE_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
+   VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+   VITE_FIREBASE_APP_ID=your_app_id
+   ```
 
 ## Usage
 
-1. **Start dev stack:**
+1. **Start dev server:**
    ```bash
-   docker compose -f docker-compose.dev.yml up
+   bun run dev
    ```
 
-2. **Start in background:**
-   ```bash
-   docker compose -f docker-compose.dev.yml up -d
-   ```
-
-3. **View logs:**
-   ```bash
-   docker compose -f docker-compose.dev.yml logs -f
-   ```
-
-4. **Stop:**
-   ```bash
-   docker compose -f docker-compose.dev.yml down
-   ```
+2. **Access the app:**
+   - Frontend: http://localhost:3000
 
 ## Hot Reload
 
-- **Backend**: Changes to `.go` files will automatically rebuild and restart
 - **Frontend**: Changes to source files will trigger Vite HMR (Hot Module Replacement)
+- **Firebase**: Changes to Firestore data will be reflected immediately (real-time updates)
 
 ## Environment Variables
 
-The dev compose file sets `VITE_API_URL=http://localhost:8080/api` automatically.
+Set the following in your `.env` file:
 
-## Ports
+```env
+VITE_FIREBASE_API_KEY=your_api_key_here
+VITE_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
+```
 
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8080
-- Adminer: http://localhost:8081
+You can find these values in your Firebase project dashboard:
+1. Go to https://console.firebase.google.com
+2. Select your project
+3. Go to Project Settings → General
+4. Scroll to "Your apps" section
+5. Copy the configuration values
 
+## Firebase Setup
+
+This project uses Firebase for backend services. You'll need to:
+
+1. Enable Authentication (Email/Password) in Firebase Console
+2. Create a Firestore database
+3. Configure Firestore security rules
+4. Set up environment variables with your Firebase config
+
+See the README.md for more details on setting up Firebase.
