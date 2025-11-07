@@ -31,7 +31,9 @@ go.work
 # Build artifacts
 main
 backend
+tmp/
 
 # Logs
 *.log
+build-errors.log
 

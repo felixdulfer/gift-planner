@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: gift-planner-postgres
+    container_name: gift-planner-postgres-dev
     environment:
       POSTGRES_USER: giftplanner
       POSTGRES_PASSWORD: giftplanner
@@ -19,8 +19,8 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
-    container_name: gift-planner-backend
+      dockerfile: Dockerfile.dev
+    container_name: gift-planner-backend-dev
     environment:
       DATABASE_URL: postgres://giftplanner:giftplanner@postgres:5432/giftplanner?sslmode=disable
       PORT: 8080
@@ -31,6 +31,10 @@ services:
       JWT_SECRET: change-me-in-production-use-a-secure-random-string
     ports:
       - "3001:8080"
+    volumes:
+      - ./backend:/app
+      - /app/tmp
+      - /app/go/pkg/mod
     depends_on:
       postgres:
         condition: service_healthy
@@ -41,10 +45,16 @@ services:
   frontend:
     build:
       context: .
-      dockerfile: frontend/Dockerfile
-    container_name: gift-planner-frontend
+      dockerfile: frontend/Dockerfile.dev
+    container_name: gift-planner-frontend-dev
+    environment:
+      VITE_API_URL: http://localhost:8080/api
     ports:
-      - "3000:80"
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/dist
     depends_on:
       - backend
     networks:
@@ -53,7 +63,7 @@ services:
 
   adminer:
     image: adminer:latest
-    container_name: gift-planner-adminer
+    container_name: gift-planner-adminer-dev
     ports:
       - "3002:8080"
     environment:

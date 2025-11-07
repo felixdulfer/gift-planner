@@ -8,6 +8,13 @@ const isGitHubPages = process.env.GITHUB_PAGES === 'true'
 
 const config = defineConfig({
 	base: isGitHubPages ? '/gift-planner/' : '/',
+	server: {
+		host: '0.0.0.0',
+		port: 3000,
+		watch: {
+			usePolling: true, // Needed for Docker file watching
+		},
+	},
 	build: {
 		outDir: 'dist',
 	},
