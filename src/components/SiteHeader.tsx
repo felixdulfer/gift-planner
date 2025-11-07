@@ -1,4 +1,5 @@
 import { Link, useRouterState } from '@tanstack/react-router'
+import { Fragment } from 'react'
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -102,14 +103,13 @@ export function SiteHeader() {
                 <BreadcrumbList>
                     <BreadcrumbItem>
                         <BreadcrumbLink asChild>
-                            {/* @ts-expect-error - TypeScript cache issue, route tree includes /dashboard */}
                             <Link to="/dashboard">Dashboard</Link>
                         </BreadcrumbLink>
                     </BreadcrumbItem>
                     {breadcrumbs.map((crumb, index) => {
                         const isLast = index === breadcrumbs.length - 1
                         return (
-                            <>
+                            <Fragment key={`${crumb.path}-${index}`}>
                                 <BreadcrumbSeparator />
                                 <BreadcrumbItem>
                                     {isLast ? (
@@ -124,7 +124,7 @@ export function SiteHeader() {
                                         </BreadcrumbLink>
                                     )}
                                 </BreadcrumbItem>
-                            </>
+                            </Fragment>
                         )
                     })}
                 </BreadcrumbList>
