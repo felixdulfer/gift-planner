@@ -238,29 +238,31 @@ export const eventsApi = {
             orderBy('createdAt', 'desc'),
         )
         const snapshot = await getDocs(q)
-        return snapshot.docs.map((doc) =>
-            transformDoc<Event>(
+        return snapshot.docs.map((doc) => {
+            const data = doc.data()
+            return transformDoc<Event>(
                 {
-                    ...doc.data(),
-                    groupId: doc.data().groupId,
-                    createdBy: doc.data().createdBy,
-                    date: doc.data().date,
+                    ...data,
+                    groupId: data.groupId,
+                    createdBy: data.createdBy,
+                    date: data.date ? transformTimestamp(data.date) : undefined,
                 },
                 doc.id,
-            ),
-        )
+            )
+        })
     },
 
     getById: async (id: string): Promise<Event> => {
         const docRef = doc(db, 'events', id)
         const docSnap = await getDoc(docRef)
         if (!docSnap.exists()) throw new Error('Event not found')
+        const data = docSnap.data()
         return transformDoc<Event>(
             {
-                ...docSnap.data(),
-                groupId: docSnap.data().groupId,
-                createdBy: docSnap.data().createdBy,
-                date: docSnap.data().date,
+                ...data,
+                groupId: data.groupId,
+                createdBy: data.createdBy,
+                date: data.date ? transformTimestamp(data.date) : undefined,
             },
             docSnap.id,
         )
@@ -283,7 +285,11 @@ export const eventsApi = {
             updatedAt: Timestamp.now(),
         }
         const docRef = await addDoc(collection(db, 'events'), eventData)
-        return transformDoc<Event>(eventData, docRef.id)
+        const createdData = {
+            ...eventData,
+            date: eventData.date ? transformTimestamp(eventData.date) : undefined,
+        }
+        return transformDoc<Event>(createdData, docRef.id)
     },
 
     update: async (
@@ -302,7 +308,16 @@ export const eventsApi = {
         await updateDoc(docRef, updateData)
         const updated = await getDoc(docRef)
         if (!updated.exists()) throw new Error('Event not found after update')
-        return transformDoc<Event>(updated.data(), updated.id)
+        const updatedData = updated.data()
+        return transformDoc<Event>(
+            {
+                ...updatedData,
+                groupId: updatedData.groupId,
+                createdBy: updatedData.createdBy,
+                date: updatedData.date ? transformTimestamp(updatedData.date) : undefined,
+            },
+            updated.id,
+        )
     },
 
     delete: async (id: string): Promise<{ message: string }> => {

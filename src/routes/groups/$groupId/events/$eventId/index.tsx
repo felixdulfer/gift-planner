@@ -2,6 +2,7 @@ import { useQueries } from '@tanstack/react-query'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
     ArrowLeft,
+    Calendar,
     Gift as GiftIcon,
     Pencil,
     Save,
@@ -102,6 +103,15 @@ function EventDetailPage() {
         )
     }
 
+    const formatEventDate = (timestamp?: number): string | null => {
+        if (!timestamp) return null
+        const date = new Date(timestamp)
+        if (Number.isNaN(date.getTime())) return null
+        return date.toLocaleDateString()
+    }
+
+    const eventDateFormatted = formatEventDate(eventData.date)
+
     return (
         <SidebarInset>
             <SiteHeader />
@@ -125,15 +135,12 @@ function EventDetailPage() {
                                         {eventData.description}
                                     </p>
                                 )}
-                                {eventData.date &&
-                                    (() => {
-                                        const date = new Date(eventData.date)
-                                        return !Number.isNaN(date.getTime()) ? (
-                                            <p className="text-muted-foreground mt-2">
-                                                {date.toLocaleDateString()}
-                                            </p>
-                                        ) : null
-                                    })()}
+                                {eventDateFormatted && (
+                                    <p className="text-muted-foreground mt-2 flex items-center gap-2">
+                                        <Calendar className="w-4 h-4" />
+                                        {eventDateFormatted}
+                                    </p>
+                                )}
                             </div>
                             <div className="flex gap-2">
                                 <Button
@@ -152,7 +159,6 @@ function EventDetailPage() {
                         <EditEventDialog
                             event={eventData}
                             eventId={eventId}
-                            groupId={groupId}
                             open={editDialogOpen}
                             onOpenChange={setEditDialogOpen}
                             onDelete={() =>
