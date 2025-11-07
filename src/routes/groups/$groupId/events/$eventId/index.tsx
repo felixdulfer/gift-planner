@@ -31,12 +31,21 @@ import {
 } from '@/db-collections'
 import { useStoreQuery } from '@/hooks/useLiveQuery'
 import { usePersistCollection } from '@/utils/persistence'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
 
 export const Route = createFileRoute('/groups/$groupId/events/$eventId/')({
     component: EventDetailPage,
 })
 
 function EventDetailPage() {
+    return (
+        <ProtectedRoute>
+            <EventDetailContent />
+        </ProtectedRoute>
+    )
+}
+
+function EventDetailContent() {
     const { groupId, eventId } = Route.useParams()
     const event = useStoreQuery(
         eventsStore,

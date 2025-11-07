@@ -1,28 +1,30 @@
 import { Link, useRouterState } from '@tanstack/react-router'
-import { Calendar, Gift, LayoutDashboard } from 'lucide-react'
+import { Calendar, Gift, LayoutDashboard, LogOut } from 'lucide-react'
 import {
-    Sidebar,
-    SidebarContent,
-    SidebarGroup,
-    SidebarGroupContent,
-    SidebarGroupLabel,
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
-    SidebarMenuSub,
-    SidebarMenuSubButton,
-    SidebarMenuSubItem,
+	Sidebar,
+	SidebarContent,
+	SidebarGroup,
+	SidebarGroupContent,
+	SidebarGroupLabel,
+	SidebarMenu,
+	SidebarMenuButton,
+	SidebarMenuItem,
+	SidebarMenuSub,
+	SidebarMenuSubButton,
+	SidebarMenuSubItem,
 } from '@/components/ui/sidebar'
 import {
-    type Event,
-    eventsStore,
-    type Group,
-    type GroupMember,
-    groupMembersStore,
-    groupsStore,
+	type Event,
+	eventsStore,
+	type Group,
+	type GroupMember,
+	groupMembersStore,
+	groupsStore,
 } from '@/db-collections'
 import { useStoreQuery } from '@/hooks/useLiveQuery'
-import { getCurrentUserId } from '@/utils/gift-planner'
+import { useLogout } from '@/hooks/use-auth'
+import { useStore } from '@tanstack/react-store'
+import { authStore } from '@/lib/auth-store'
 
 const navigation = [
     {
@@ -38,9 +40,11 @@ const navigation = [
 ]
 
 export function AppSidebar() {
-    const router = useRouterState()
-    const currentPath = router.location.pathname
-    const currentUserId = getCurrentUserId()
+	const router = useRouterState()
+	const currentPath = router.location.pathname
+	const authState = useStore(authStore)
+	const currentUserId = authState.user?.id || ''
+	const { logout } = useLogout()
 
     const groups = useStoreQuery(groupsStore, (items) => items)
     const groupMembers = useStoreQuery(groupMembersStore, (items) => items)
@@ -181,6 +185,29 @@ export function AppSidebar() {
                         </SidebarGroupContent>
                     </SidebarGroup>
                 )}
+
+                <SidebarGroup>
+                    <SidebarGroupContent>
+                        <SidebarMenu>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton
+                                    onClick={logout}
+                                    tooltip="Logout"
+                                >
+                                    <LogOut />
+                                    <span>Logout</span>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                            {authState.user && (
+                                <SidebarMenuItem>
+                                    <div className="px-2 py-1 text-xs text-muted-foreground">
+                                        {authState.user.name}
+                                    </div>
+                                </SidebarMenuItem>
+                            )}
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
             </SidebarContent>
         </Sidebar>
     )

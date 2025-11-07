@@ -22,12 +22,21 @@ import {
 import { useStoreQuery } from '@/hooks/useLiveQuery'
 import { getCurrentUserId } from '@/utils/gift-planner'
 import { usePersistCollection } from '@/utils/persistence'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
 
 export const Route = createFileRoute('/groups/')({
     component: GroupsPage,
 })
 
 function GroupsPage() {
+    return (
+        <ProtectedRoute>
+            <GroupsContent />
+        </ProtectedRoute>
+    )
+}
+
+function GroupsContent() {
     const currentUserId = getCurrentUserId()
 
     const groups = useStoreQuery(groupsStore, (items) => items)

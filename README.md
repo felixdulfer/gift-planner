@@ -83,6 +83,15 @@ Am example chat application built with TanStack Start, TanStack Store, and Claud
 ## .env Updates
 
 ```env
+# Supabase Configuration
+# Get these values from: https://supabase.com/dashboard → Your Project → Settings → API
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your_publishable_key_here
+
+# API Configuration (if using backend)
+VITE_API_URL=http://localhost:8080/api
+
+# Anthropic API (if using AI features)
 ANTHROPIC_API_KEY=your_anthropic_api_key
 ```
 

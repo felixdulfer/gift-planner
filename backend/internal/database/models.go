@@ -11,7 +11,7 @@ import (
 type User struct {
 	ID        string    `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
 	Name      string    `gorm:"not null" json:"name"`
-	Email     *string   `gorm:"uniqueIndex" json:"email,omitempty"`
+	Email     string    `gorm:"not null;uniqueIndex" json:"email"`
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"createdAt"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updatedAt"`
 

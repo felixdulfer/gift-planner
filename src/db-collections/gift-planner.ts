@@ -3,19 +3,41 @@ import { z } from 'zod'
 
 // User Schema
 const UserSchema = z.preprocess(
-    (data: { email?: string; [key: string]: unknown }) => ({
-        ...data,
-        email: data.email?.trim() || undefined,
-    }),
+    (data: { email?: string | null; createdAt?: string | number; [key: string]: unknown }) => {
+        const processed: { email: string; createdAt: number; [key: string]: unknown } = {
+            ...data,
+            // Handle email: ensure it's a string
+            email: data.email && typeof data.email === 'string' && data.email.trim() 
+                ? data.email.trim() 
+                : '',
+        }
+        
+        // Convert createdAt from ISO string to timestamp if needed
+        if (data.createdAt) {
+            if (typeof data.createdAt === 'string') {
+                const timestamp = new Date(data.createdAt).getTime()
+                processed.createdAt = isNaN(timestamp) ? Date.now() : timestamp
+            } else {
+                processed.createdAt = data.createdAt
+            }
+        } else {
+            processed.createdAt = Date.now()
+        }
+        
+        return processed
+    },
     z.object({
         id: z.string(),
         name: z.string(),
-        email: z.string().email().optional(),
+        email: z.string().email(),
         createdAt: z.number(),
     }),
 )
 
 export type User = z.infer<typeof UserSchema>
+
+// Export schema for validation
+export { UserSchema }
 
 // Group Schema
 const GroupSchema = z.object({

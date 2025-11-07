@@ -32,12 +32,21 @@ import {
 } from '@/db-collections'
 import { useStoreQuery } from '@/hooks/useLiveQuery'
 import { usePersistCollection } from '@/utils/persistence'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
 
 export const Route = createFileRoute('/groups/$groupId/')({
     component: GroupDetailPage,
 })
 
 function GroupDetailPage() {
+    return (
+        <ProtectedRoute>
+            <GroupDetailContent />
+        </ProtectedRoute>
+    )
+}
+
+function GroupDetailContent() {
     const { groupId } = Route.useParams()
     const group = useStoreQuery(
         groupsStore,

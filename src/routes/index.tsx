@@ -7,10 +7,14 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card'
+import { useStore } from '@tanstack/react-store'
+import { authStore } from '@/lib/auth-store'
 
 export const Route = createFileRoute('/')({ component: App })
 
 function App() {
+    const authState = useStore(authStore)
+
     return (
         <div className="flex min-h-screen items-center justify-center p-4">
             <div className="w-full max-w-4xl">
@@ -27,9 +31,22 @@ function App() {
                     </div>
 
                     <div className="flex items-center justify-center gap-4">
-                        <Link to="/groups">
-                            <Button size="lg">Get Started</Button>
-                        </Link>
+                        {authState.isAuthenticated ? (
+                            <Link to="/dashboard">
+                                <Button size="lg">Go to Dashboard</Button>
+                            </Link>
+                        ) : (
+                            <>
+                                <Link to="/register">
+                                    <Button size="lg">Get Started</Button>
+                                </Link>
+                                <Link to="/login">
+                                    <Button size="lg" variant="outline">
+                                        Login
+                                    </Button>
+                                </Link>
+                            </>
+                        )}
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-3 mt-6">

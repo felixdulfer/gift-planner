@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/felixdulfer/gift-planner/backend/internal/database"
 	"github.com/gin-gonic/gin"
@@ -9,14 +10,17 @@ import (
 
 func (h *Handlers) CreateUser(c *gin.Context) {
 	var userData struct {
-		Name  string  `json:"name" binding:"required"`
-		Email *string `json:"email"`
+		Name  string `json:"name" binding:"required"`
+		Email string `json:"email" binding:"required,email"`
 	}
 
 	if err := c.ShouldBindJSON(&userData); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Normalize email to lowercase
+	userData.Email = strings.ToLower(strings.TrimSpace(userData.Email))
 
 	user := database.User{
 		Name:  userData.Name,
@@ -62,7 +66,7 @@ func (h *Handlers) UpdateUser(c *gin.Context) {
 
 	var updateData struct {
 		Name  *string `json:"name"`
-		Email *string `json:"email"`
+		Email *string `json:"email" binding:"omitempty,email"`
 	}
 
 	if err := c.ShouldBindJSON(&updateData); err != nil {
@@ -74,7 +78,9 @@ func (h *Handlers) UpdateUser(c *gin.Context) {
 		user.Name = *updateData.Name
 	}
 	if updateData.Email != nil {
-		user.Email = updateData.Email
+		// Normalize email to lowercase
+		normalizedEmail := strings.ToLower(strings.TrimSpace(*updateData.Email))
+		user.Email = normalizedEmail
 	}
 
 	if err := h.db.Save(&user).Error; err != nil {

@@ -10,12 +10,48 @@ import type {
     User,
     Wishlist,
 } from '../db-collections/gift-planner'
+import { UserSchema } from '../db-collections/gift-planner'
 import { apiClient } from './api-client'
+
+// Helper to transform API user response
+function transformUser(data: unknown): User {
+    try {
+        const parsed = UserSchema.parse(data)
+        return parsed
+    } catch (error) {
+        console.error('User validation error:', error)
+        console.error('Raw user data:', data)
+        // If validation fails, try to extract at least the id
+        if (data && typeof data === 'object' && 'id' in data) {
+            const fallback = data as {
+                id: string
+                name: string
+                email?: string
+                createdAt?: string | number
+            }
+            return {
+                id: fallback.id,
+                name: fallback.name || '',
+                email: fallback.email || '',
+                createdAt: fallback.createdAt
+                    ? typeof fallback.createdAt === 'string'
+                        ? new Date(fallback.createdAt).getTime()
+                        : fallback.createdAt
+                    : Date.now(),
+            }
+        }
+        throw new Error(
+            `Invalid user data: ${error instanceof Error ? error.message : String(error)}`,
+        )
+    }
+}
 
 // Auth API
 export const authApi = {
-    createUser: (data: { name: string; email?: string }) =>
-        apiClient.post<User>('/auth/users', data),
+    createUser: async (data: { name: string; email: string }) => {
+        const response = await apiClient.post<unknown>('/auth/users', data)
+        return transformUser(response)
+    },
 
     beginRegistration: (userId: string) =>
         apiClient.post<{ sessionId: string; session: unknown }>(
@@ -23,22 +59,28 @@ export const authApi = {
             { userId },
         ),
 
-    finishRegistration: (userId: string, sessionId: string) =>
+    finishRegistration: (
+        userId: string,
+        sessionId: string,
+        credential: unknown,
+    ) =>
         apiClient.post<{ message: string }>('/auth/register/finish', {
             userId,
             sessionId,
+            credential,
         }),
 
-    beginLogin: (userId: string) =>
-        apiClient.post<{ sessionId: string; session: unknown }>(
+    beginLogin: (email: string) =>
+        apiClient.post<{ sessionId: string; session: unknown; userId: string }>(
             '/auth/login/begin',
-            { userId },
+            { email },
         ),
 
-    finishLogin: (userId: string, sessionId: string) =>
+    finishLogin: (userId: string, sessionId: string, credential: unknown) =>
         apiClient.post<{ message: string }>('/auth/login/finish', {
             userId,
             sessionId,
+            credential,
         }),
 }
 

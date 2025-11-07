@@ -49,10 +49,25 @@ class ApiClient {
         })
 
         if (!response.ok) {
-            const error: ApiError = await response.json().catch(() => ({
-                error: `HTTP ${response.status}: ${response.statusText}`,
-            }))
-            throw new Error(error.error || 'API request failed')
+            let errorMessage = `HTTP ${response.status}: ${response.statusText}`
+            try {
+                const errorData: ApiError = await response.json()
+                errorMessage = errorData.error || errorMessage
+                console.error('Backend error response:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    error: errorData,
+                    errorString: JSON.stringify(errorData, null, 2),
+                })
+            } catch {
+                // If JSON parsing fails, use the status text
+                const text = await response.text().catch(() => '')
+                if (text) {
+                    console.error('Backend error response (non-JSON):', text)
+                    errorMessage = text || errorMessage
+                }
+            }
+            throw new Error(errorMessage)
         }
 
         // Handle empty responses
@@ -63,7 +78,17 @@ class ApiClient {
             return {} as T
         }
 
-        return response.json()
+        const text = await response.text()
+        if (!text) {
+            return {} as T
+        }
+
+        try {
+            return JSON.parse(text) as T
+        } catch (error) {
+            console.error('Failed to parse JSON response:', text)
+            throw new Error('Invalid JSON response from server')
+        }
     }
 
     async get<T>(endpoint: string): Promise<T> {
@@ -71,6 +96,12 @@ class ApiClient {
     }
 
     async post<T>(endpoint: string, data?: unknown): Promise<T> {
+        if (endpoint.includes('/auth/register/finish') || endpoint.includes('/auth/login/finish')) {
+            console.log('Sending credential data to:', endpoint, {
+                data: data,
+                dataString: JSON.stringify(data, null, 2),
+            })
+        }
         return this.request<T>(endpoint, {
             method: 'POST',
             body: data ? JSON.stringify(data) : undefined,

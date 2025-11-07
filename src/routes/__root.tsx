@@ -26,16 +26,19 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 
 function RootComponent() {
     const router = useRouterState()
-    const isHomePage = router.location.pathname === '/'
+    const pathname = router.location.pathname
+    const isHomePage = pathname === '/'
+    const isAuthPage = pathname === '/login' || pathname === '/register'
 
-    const content = isHomePage ? (
-        <Outlet />
-    ) : (
-        <SidebarProvider>
-            <AppSidebar />
+    const content =
+        isHomePage || isAuthPage ? (
             <Outlet />
-        </SidebarProvider>
-    )
+        ) : (
+            <SidebarProvider>
+                <AppSidebar />
+                <Outlet />
+            </SidebarProvider>
+        )
 
     return (
         <ThemeProvider

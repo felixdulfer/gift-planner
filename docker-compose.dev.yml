@@ -48,7 +48,7 @@ services:
       dockerfile: frontend/Dockerfile.dev
     container_name: gift-planner-frontend-dev
     environment:
-      VITE_API_URL: http://localhost:8080/api
+      VITE_API_URL: http://localhost:3001/api
     ports:
       - "3000:3000"
     volumes:

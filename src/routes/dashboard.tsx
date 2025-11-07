@@ -34,12 +34,21 @@ import {
 import { useStoreQuery } from '@/hooks/useLiveQuery'
 import { getCurrentTimestamp, getCurrentUserId } from '@/utils/gift-planner'
 import { usePersistCollection } from '@/utils/persistence'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
 
 export const Route = createFileRoute('/dashboard')({
     component: DashboardPage,
 })
 
 function DashboardPage() {
+    return (
+        <ProtectedRoute>
+            <DashboardContent />
+        </ProtectedRoute>
+    )
+}
+
+function DashboardContent() {
     const currentUserId = getCurrentUserId()
     // Track recently purchased gifts to keep them visible until navigation/refresh
     const [recentlyPurchasedGiftIds, setRecentlyPurchasedGiftIds] = useState<

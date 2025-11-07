@@ -1,9 +1,15 @@
 package auth
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/felixdulfer/gift-planner/backend/internal/config"
@@ -21,7 +27,7 @@ type WebAuthnService struct {
 type UserModel struct {
 	ID          string
 	Name        string
-	Email       *string
+	Email       string
 	Credentials []database.WebAuthnCredential
 }
 
@@ -34,10 +40,7 @@ func (u *UserModel) WebAuthnName() string {
 }
 
 func (u *UserModel) WebAuthnDisplayName() string {
-	if u.Email != nil {
-		return *u.Email
-	}
-	return u.Name
+	return u.Email
 }
 
 func (u *UserModel) WebAuthnIcon() string {
@@ -143,9 +146,19 @@ func (s *WebAuthnService) FinishRegistration(userID, sessionID string, r *http.R
 		return err
 	}
 
+	// Log the request body for debugging
+	bodyBytes, _ := io.ReadAll(r.Body)
+	r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+	log.Printf("[WebAuthn] Request body length: %d bytes", len(bodyBytes))
+	log.Printf("[WebAuthn] Request body: %s", string(bodyBytes))
+
 	credential, err := s.webauthn.FinishRegistration(userModel, session, r)
 	if err != nil {
-		return err
+		// Log the full error for debugging
+		errorMsg := err.Error()
+		log.Printf("[WebAuthn] Error: %s", errorMsg)
+		// Return the full error message
+		return fmt.Errorf("Parse error for Registration: %w", err)
 	}
 
 	// Store credential
@@ -166,10 +179,13 @@ func (s *WebAuthnService) FinishRegistration(userID, sessionID string, r *http.R
 	return nil
 }
 
-func (s *WebAuthnService) BeginLogin(userID string) (string, *webauthn.SessionData, error) {
+func (s *WebAuthnService) BeginLogin(email string) (string, string, *webauthn.SessionData, error) {
+	// Normalize email to lowercase for consistent lookup
+	email = strings.ToLower(strings.TrimSpace(email))
+	
 	var user database.User
-	if err := s.db.Preload("Credentials").First(&user, "id = ?", userID).Error; err != nil {
-		return "", nil, err
+	if err := s.db.Preload("Credentials").First(&user, "LOWER(email) = ?", email).Error; err != nil {
+		return "", "", nil, err
 	}
 
 	userModel := &UserModel{
@@ -181,23 +197,23 @@ func (s *WebAuthnService) BeginLogin(userID string) (string, *webauthn.SessionDa
 
 	_, session, err := s.webauthn.BeginLogin(userModel)
 	if err != nil {
-		return "", nil, err
+		return "", "", nil, err
 	}
 
 	// Store session data
 	sessionData, _ := json.Marshal(session)
 	sessionRecord := database.WebAuthnSession{
-		UserID:      &userID,
+		UserID:      &user.ID,
 		Challenge:   []byte(session.Challenge),
 		SessionData: sessionData,
 		ExpiresAt:   time.Now().Add(5 * time.Minute),
 	}
 
 	if err := s.db.Create(&sessionRecord).Error; err != nil {
-		return "", nil, err
+		return "", "", nil, err
 	}
 
-	return sessionRecord.ID.String(), session, nil
+	return sessionRecord.ID.String(), user.ID, session, nil
 }
 
 func (s *WebAuthnService) FinishLogin(userID, sessionID string, r *http.Request) error {
@@ -215,8 +231,17 @@ func (s *WebAuthnService) FinishLogin(userID, sessionID string, r *http.Request)
 		return errors.New("session expired")
 	}
 
+	// Use the userID from the session record if available, otherwise use the provided userID
+	// This ensures we're using the correct user ID that was used during BeginLogin
+	var lookupUserID string
+	if sessionRecord.UserID != nil {
+		lookupUserID = *sessionRecord.UserID
+	} else {
+		lookupUserID = userID
+	}
+
 	var user database.User
-	if err := s.db.Preload("Credentials").First(&user, "id = ?", userID).Error; err != nil {
+	if err := s.db.Preload("Credentials").First(&user, "id = ?", lookupUserID).Error; err != nil {
 		return err
 	}
 
@@ -232,8 +257,59 @@ func (s *WebAuthnService) FinishLogin(userID, sessionID string, r *http.Request)
 		return err
 	}
 
+	// Log for debugging
+	log.Printf("[WebAuthn FinishLogin] User ID from session record: %s", lookupUserID)
+	log.Printf("[WebAuthn FinishLogin] User ID from userModel: %s", userModel.ID)
+	log.Printf("[WebAuthn FinishLogin] User ID bytes: %v", userModel.WebAuthnID())
+	log.Printf("[WebAuthn FinishLogin] Session data UserID: %v", session.UserID)
+	log.Printf("[WebAuthn FinishLogin] Session data raw: %s", string(sessionRecord.SessionData))
+
+	// Log the request body for debugging
+	bodyBytes, _ := io.ReadAll(r.Body)
+	r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+	log.Printf("[WebAuthn FinishLogin] Request body: %s", string(bodyBytes))
+	
+	// Parse the credential to see what userHandle it contains
+	var credentialData map[string]interface{}
+	if err := json.Unmarshal(bodyBytes, &credentialData); err == nil {
+		if response, ok := credentialData["response"].(map[string]interface{}); ok {
+			if userHandle, ok := response["userHandle"].(string); ok {
+				log.Printf("[WebAuthn FinishLogin] UserHandle from authenticator (base64): %s", userHandle)
+				// Decode base64url userHandle
+				userHandleBytes, err := base64.RawURLEncoding.DecodeString(userHandle)
+				if err == nil {
+					log.Printf("[WebAuthn FinishLogin] UserHandle from authenticator (decoded): %s", string(userHandleBytes))
+				}
+			} else {
+				log.Printf("[WebAuthn FinishLogin] No userHandle in response")
+			}
+		}
+	}
+	
+	// Reset body for the library
+	r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+	
+	// Ensure the userModel ID matches the lookupUserID exactly
+	// This is critical for userHandle validation
+	if userModel.ID != lookupUserID {
+		log.Printf("[WebAuthn FinishLogin] WARNING: User ID mismatch! userModel.ID=%s, lookupUserID=%s", userModel.ID, lookupUserID)
+		// Update userModel to use the correct ID
+		userModel.ID = lookupUserID
+	}
+
 	credential, err := s.webauthn.FinishLogin(userModel, session, r)
 	if err != nil {
+		// Check if it's a BackupEligible flag inconsistency - this can happen with some authenticators
+		// We need to check if the credential is still valid despite this warning
+		errorMsg := err.Error()
+		if strings.Contains(errorMsg, "BackupEligible") || strings.Contains(errorMsg, "backup") {
+			log.Printf("[WebAuthn FinishLogin] Warning: BackupEligible flag inconsistency detected: %v", err)
+			// This is a validation warning, but we should still return the error
+			// The go-webauthn library is strict about this validation
+			// Users may need to re-register their authenticator
+			return fmt.Errorf("authenticator validation failed: %w. Please try re-registering your security key", err)
+		}
+		log.Printf("[WebAuthn FinishLogin] Error: %v", err)
 		return err
 	}
 
