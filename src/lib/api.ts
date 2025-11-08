@@ -287,7 +287,9 @@ export const eventsApi = {
         const docRef = await addDoc(collection(db, 'events'), eventData)
         const createdData = {
             ...eventData,
-            date: eventData.date ? transformTimestamp(eventData.date) : undefined,
+            date: eventData.date
+                ? transformTimestamp(eventData.date)
+                : undefined,
         }
         return transformDoc<Event>(createdData, docRef.id)
     },
@@ -314,7 +316,9 @@ export const eventsApi = {
                 ...updatedData,
                 groupId: updatedData.groupId,
                 createdBy: updatedData.createdBy,
-                date: updatedData.date ? transformTimestamp(updatedData.date) : undefined,
+                date: updatedData.date
+                    ? transformTimestamp(updatedData.date)
+                    : undefined,
             },
             updated.id,
         )
