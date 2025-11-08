@@ -19,34 +19,61 @@ bun run build
 
 ## Deployment
 
-This application is configured for deployment to GitHub Pages. The deployment is automated via GitHub Actions.
+This application is configured for deployment to Firebase Hosting.
 
-### GitHub Pages Setup
+### Firebase Hosting Setup
 
-1. **Enable GitHub Pages** in your repository settings:
-   - Go to Settings → Pages
-   - Under "Source", select "GitHub Actions"
+1. **Install Firebase CLI** (if not already installed):
+   ```bash
+   npm install -g firebase-tools
+   ```
 
-2. **Automatic Deployment**:
-   - The app automatically deploys when you push to the `main` branch
-   - The workflow builds the app and deploys it to GitHub Pages
-   - Your app will be available at `https://<username>.github.io/gift-planner/`
+2. **Login to Firebase**:
+   ```bash
+   firebase login
+   ```
 
-3. **Manual Deployment**:
-   - You can also trigger deployment manually from the Actions tab
+3. **Initialize Firebase** (if not already done):
+   ```bash
+   firebase init hosting
+   ```
+   - Select your Firebase project
+   - Set public directory to `dist`
+   - Configure as single-page app (yes)
+   - Set up automatic builds and deploys with GitHub (optional)
+
+4. **Deploy to Firebase Hosting**:
+   ```bash
+   bun run deploy
+   ```
+   This will build the app and deploy only the hosting service.
+
+   Or deploy everything (hosting, Firestore rules, etc.):
+   ```bash
+   bun run deploy:all
+   ```
 
 ### Configuration
 
 The app is configured with:
+- Build output: `dist` directory (configured in `vite.config.ts`)
+- Base path: `/` (root path for Firebase Hosting)
+- Firebase hosting config: `firebase.json` points to `dist` directory
+- SPA routing: All routes rewrite to `/index.html` for client-side routing
 
-- Base path: `/gift-planner/` (for GitHub Pages)
-- Build output: `dist/client` directory
-- Automatic base path detection via environment variables
+### Manual Deployment Steps
 
-If you need to change the repository name, update the base path in:
+1. Build the application:
+   ```bash
+   bun run build
+   ```
 
-- `vite.config.ts` - Update the `base` config
-- `.github/workflows/deploy.yml` - The workflow will automatically use the correct base path
+2. Deploy to Firebase:
+   ```bash
+   firebase deploy --only hosting
+   ```
+
+Your app will be available at your Firebase hosting URL (e.g., `https://your-project-id.web.app`).
 
 ## Testing
 

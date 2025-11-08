@@ -6,6 +6,8 @@
     "dev": "vite dev --port 3000 --host",
     "build": "vite build",
     "serve": "vite preview",
+    "deploy": "bun run build && firebase deploy --only hosting",
+    "deploy:all": "bun run build && firebase deploy",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
