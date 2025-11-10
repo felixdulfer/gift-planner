@@ -3,6 +3,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { Calendar, CheckCircle2, ExternalLink } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { CreateGroupDialog } from '@/components/gift-planner/CreateGroupDialog'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { SiteHeader } from '@/components/SiteHeader'
 import { Badge } from '@/components/ui/badge'
@@ -367,9 +368,13 @@ function DashboardContent() {
                                         No events yet
                                     </CardTitle>
                                     <CardDescription className="mb-6">
-                                        Create a group and add events to see
-                                        them here
+                                        {userGroups.length === 0
+                                            ? 'Create your first group to start planning gifts'
+                                            : 'Create a group and add events to see them here'}
                                     </CardDescription>
+                                    {userGroups.length === 0 && (
+                                        <CreateGroupDialog />
+                                    )}
                                 </CardContent>
                             </Card>
                         )}

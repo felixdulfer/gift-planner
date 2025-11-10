@@ -76,6 +76,28 @@ test.describe('Gift Planner App', () => {
 		await expect(noGroupsMessage).toBeVisible({ timeout: 5000 })
 	})
 
+	test('should show create group button on dashboard when user has no groups', async ({
+		page,
+	}) => {
+		await page.goto('/dashboard')
+		await page.waitForLoadState('networkidle')
+
+		// Wait for async operations to complete
+		await page.waitForTimeout(1000)
+
+		// Should show "No events yet" message
+		const noEventsMessage = page.locator('text=No events yet')
+		await expect(noEventsMessage).toBeVisible({ timeout: 5000 })
+
+		// Should show "Create your first group" message when there are no groups
+		const createGroupMessage = page.locator('text=Create your first group to start planning gifts')
+		await expect(createGroupMessage).toBeVisible()
+
+		// Should show Create Group button
+		const createGroupButton = page.getByRole('button', { name: 'Create Group' })
+		await expect(createGroupButton).toBeVisible()
+	})
+
 	test('should add a new group', async ({ page }) => {
 		const groupName = `Test Group ${Date.now()}`
 
@@ -108,4 +130,3 @@ test.describe('Gift Planner App', () => {
 		await expect(page.getByText(groupName)).toBeVisible({ timeout: 10000 })
 	})
 })
-
